@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+frontend/dist/
+frontend/.vite/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+backend-node/.env
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Laravel
+backend/bootstrap/cache/*.php
+backend/storage/logs/*.log
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Railway / Vercel
+.vercel/
