@@ -5,11 +5,21 @@ const authorize = require('../middleware/authorize');
 
 const router = express.Router();
 
+const isPM = (req) => req.user.role_name === 'project_manager';
+
 // ── GET /api/projects?program_id=X ───────────────────────────────────────────
 router.get('/', authenticate, authorize('projects', 'view'), (req, res, next) => {
   try {
     const { program_id } = req.query;
-    let query = `
+    const conditions = [];
+    const params = [];
+
+    if (program_id) { conditions.push('pj.program_id = ?'); params.push(program_id); }
+    if (isPM(req))  { conditions.push('pj.owner_id = ?');   params.push(req.user.id); }
+
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    const query = `
       SELECT pj.*, u.username AS owner_name, pr.name AS program_name, p.name AS portfolio_name,
         (SELECT COUNT(*) FROM tasks t WHERE t.parent_type = 'project' AND t.parent_id = pj.id) AS task_count,
         COALESCE((SELECT ROUND(AVG(t.percent_complete))
@@ -33,10 +43,9 @@ router.get('/', authenticate, authorize('projects', 'view'), (req, res, next) =>
       LEFT JOIN users u ON u.id = pj.owner_id
       LEFT JOIN programs pr ON pr.id = pj.program_id
       LEFT JOIN portfolios p ON p.id = pr.portfolio_id
+      ${where}
+      ORDER BY pj.created_at DESC
     `;
-    const params = [];
-    if (program_id) { query += ' WHERE pj.program_id = ?'; params.push(program_id); }
-    query += ' ORDER BY pj.created_at DESC';
     res.json(db.prepare(query).all(...params));
   } catch (err) { next(err); }
 });
@@ -52,17 +61,31 @@ router.get('/:id', authenticate, authorize('projects', 'view'), (req, res, next)
       LEFT JOIN portfolios p ON p.id = pr.portfolio_id
       WHERE pj.id = ?
     `).get(req.params.id);
+
     if (!project) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
 
-    const tasks = db.prepare(`
-      SELECT t.*, u.username AS assigned_to_name,
-             r.id AS risk_id, r.risk_status, r.risk_rate
-      FROM tasks t
-      LEFT JOIN users u ON u.id = t.assigned_to
-      LEFT JOIN risks r ON r.task_id = t.id
-      WHERE t.parent_type = 'project' AND t.parent_id = ?
-      ORDER BY t.sequence ASC, t.priority ASC
-    `).all(req.params.id);
+    // PM can only see their own projects
+    if (isPM(req) && project.owner_id !== req.user.id) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+    }
+
+    const tasksQuery = isPM(req)
+      ? `SELECT t.*, u.username AS assigned_to_name,
+               r.id AS risk_id, r.risk_status, r.risk_rate
+         FROM tasks t
+         LEFT JOIN users u ON u.id = t.assigned_to
+         LEFT JOIN risks r ON r.task_id = t.id
+         WHERE t.parent_type = 'project' AND t.parent_id = ?
+         ORDER BY t.sequence ASC, t.priority ASC`
+      : `SELECT t.*, u.username AS assigned_to_name,
+               r.id AS risk_id, r.risk_status, r.risk_rate
+         FROM tasks t
+         LEFT JOIN users u ON u.id = t.assigned_to
+         LEFT JOIN risks r ON r.task_id = t.id
+         WHERE t.parent_type = 'project' AND t.parent_id = ?
+         ORDER BY t.sequence ASC, t.priority ASC`;
+
+    const tasks = db.prepare(tasksQuery).all(req.params.id);
 
     // Attach dependency ids to each task
     const taskIds = tasks.map(t => t.id);
@@ -105,9 +128,12 @@ router.post('/', authenticate, authorize('projects', 'edit'), (req, res, next) =
     if (!program) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Program not found' } });
 
     const p = Math.min(10, Math.max(1, parseInt(priority) || 5));
+    // PM always owns the projects they create; other roles can set an explicit owner
+    const resolvedOwnerId = isPM(req) ? req.user.id : (owner_id || req.user.id);
+
     const result = db.prepare(
       'INSERT INTO projects (program_id, name, description, status, priority, start_date, end_date, owner_id, clickup_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(program_id, name, description || null, status, p, start_date || null, end_date || null, owner_id || req.user.id, clickup_id || null);
+    ).run(program_id, name, description || null, status, p, start_date || null, end_date || null, resolvedOwnerId, clickup_id || null);
 
     res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(result.lastInsertRowid));
   } catch (err) { next(err); }
@@ -116,10 +142,18 @@ router.post('/', authenticate, authorize('projects', 'edit'), (req, res, next) =
 // ── PUT /api/projects/:id ─────────────────────────────────────────────────────
 router.put('/:id', authenticate, authorize('projects', 'edit'), (req, res, next) => {
   try {
-    const existing = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, owner_id FROM projects WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+
+    if (isPM(req) && existing.owner_id !== req.user.id) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You can only edit your own projects' } });
+    }
+
     const { name, description, status, priority, start_date, end_date, owner_id, clickup_id } = req.body;
     const p = priority != null ? Math.min(10, Math.max(1, parseInt(priority) || 5)) : null;
+    // PM cannot reassign ownership to another user
+    const resolvedOwnerId = isPM(req) ? null : (owner_id ?? null);
+
     db.prepare(`
       UPDATE projects SET name = COALESCE(?, name), description = COALESCE(?, description),
         status = COALESCE(?, status), priority = COALESCE(?, priority),
@@ -128,7 +162,7 @@ router.put('/:id', authenticate, authorize('projects', 'edit'), (req, res, next)
         clickup_id = CASE WHEN ? IS NOT NULL THEN ? ELSE clickup_id END,
         updated_at = datetime('now')
       WHERE id = ?
-    `).run(name ?? null, description ?? null, status ?? null, p ?? null, start_date ?? null, end_date ?? null, owner_id ?? null, clickup_id ?? null, clickup_id ?? null, req.params.id);
+    `).run(name ?? null, description ?? null, status ?? null, p ?? null, start_date ?? null, end_date ?? null, resolvedOwnerId, clickup_id ?? null, clickup_id ?? null, req.params.id);
     res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id));
   } catch (err) { next(err); }
 });
@@ -136,8 +170,13 @@ router.put('/:id', authenticate, authorize('projects', 'edit'), (req, res, next)
 // ── DELETE /api/projects/:id ──────────────────────────────────────────────────
 router.delete('/:id', authenticate, authorize('projects', 'edit'), (req, res, next) => {
   try {
-    const existing = db.prepare('SELECT id FROM projects WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, owner_id FROM projects WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+
+    if (isPM(req) && existing.owner_id !== req.user.id) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You can only delete your own projects' } });
+    }
+
     db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
     res.json({ message: 'Project deleted successfully' });
   } catch (err) { next(err); }

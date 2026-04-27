@@ -7,10 +7,18 @@ use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller {
+    private function isPM(Request $request): bool {
+        $user = $request->attributes->get('auth_user');
+        return $user && $user->role && $user->role->name === 'project_manager';
+    }
+
     public function index(Request $request) {
         $query = Project::with('owner');
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
+        }
+        if ($this->isPM($request)) {
+            $query->where('owner_id', $request->attributes->get('auth_user')->id);
         }
         $projects = $query->get()->map(function($proj) {
             $taskIds = Task::where('parent_type', 'project')->where('parent_id', $proj->id)->pluck('id');
@@ -56,8 +64,17 @@ class ProjectController extends Controller {
         return response()->json($projects);
     }
 
-    public function show($id) {
+    public function show(Request $request, $id) {
         $project = Project::with('owner')->findOrFail($id);
+
+        // PM can only access their own projects
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ($project->owner_id !== $authUser->id) {
+                return response()->json(['error' => 'Project not found'], 404);
+            }
+        }
+
         $tasks = Task::where('parent_type', 'project')->where('parent_id', $id)
             ->with('risk', 'assignedUser')
             ->orderBy('sequence')
@@ -82,18 +99,43 @@ class ProjectController extends Controller {
             'clickup_id' => 'nullable|string',
         ]);
 
+        if ($this->isPM($request)) {
+            $data['owner_id'] = $request->attributes->get('auth_user')->id;
+        }
+
         $project = Project::create($data);
         return response()->json($project, 201);
     }
 
     public function update(Request $request, $id) {
         $project = Project::findOrFail($id);
-        $project->update($request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id']));
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ($project->owner_id !== $authUser->id) {
+                return response()->json(['error' => 'You can only edit your own projects'], 403);
+            }
+            // PM cannot reassign ownership
+            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'clickup_id']);
+        } else {
+            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id']);
+        }
+
+        $project->update($fields);
         return response()->json($project);
     }
 
-    public function destroy($id) {
-        Project::findOrFail($id)->delete();
+    public function destroy(Request $request, $id) {
+        $project = Project::findOrFail($id);
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ($project->owner_id !== $authUser->id) {
+                return response()->json(['error' => 'You can only delete your own projects'], 403);
+            }
+        }
+
+        $project->delete();
         return response()->json(['message' => 'Project deleted']);
     }
 }
