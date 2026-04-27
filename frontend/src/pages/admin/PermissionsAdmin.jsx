@@ -11,26 +11,50 @@ export default function PermissionsAdmin() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { if (data?.matrix) setMatrix(JSON.parse(JSON.stringify(data.matrix))); }, [data]);
+  useEffect(() => {
+    if (data?.matrix && data?.pages) {
+      // Rebuild as { [role_id]: { [page_id]: access_level } } so lookups
+      // use the actual DB id, not the array position.
+      const m = {};
+      for (const row of data.matrix) {
+        m[row.role_id] = {};
+        for (const page of data.pages) {
+          m[row.role_id][page.id] = row[page.slug] ?? 'none';
+        }
+      }
+      setMatrix(m);
+    }
+  }, [data]);
 
   const handleChange = (roleId, pageId, value) => {
     setMatrix(m => ({ ...m, [roleId]: { ...(m[roleId] || {}), [pageId]: value } }));
     setSaved(false);
   };
 
+  const [saveError, setSaveError] = useState('');
+
   const handleSave = async () => {
-    setSaving(true);
-    const updates = [];
-    for (const roleId of Object.keys(matrix)) {
-      for (const pageId of Object.keys(matrix[roleId])) {
-        updates.push({ role_id: parseInt(roleId), page_id: parseInt(pageId), access_level: matrix[roleId][pageId] });
+    setSaving(true); setSaved(false); setSaveError('');
+    try {
+      const permissions = [];
+      for (const roleId of Object.keys(matrix)) {
+        for (const pageId of Object.keys(matrix[roleId])) {
+          permissions.push({
+            role_id:      parseInt(roleId),
+            page_id:      parseInt(pageId),
+            access_level: matrix[roleId][pageId],
+          });
+        }
       }
+      await client.put('/permissions', { permissions });
+      clearPermissionsCache();
+      setSaved(true);
+      refetch();
+    } catch (err) {
+      setSaveError(err.response?.data?.message || 'Save failed — please try again.');
+    } finally {
+      setSaving(false);
     }
-    await client.put('/permissions', { updates });
-    clearPermissionsCache();
-    setSaved(true);
-    setSaving(false);
-    refetch();
   };
 
   if (loading) return <div style={{ padding: '2rem', color: '#6b7280' }}>Loading...</div>;
@@ -48,7 +72,8 @@ export default function PermissionsAdmin() {
           <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: '0.25rem' }}>Configure per-page access for each role. Admin roles always have full access.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {saved && <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>Saved!</span>}
+          {saved      && <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.9rem' }}>✓ Saved</span>}
+          {saveError  && <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>{saveError}</span>}
           <button onClick={handleSave} disabled={saving} style={{ padding: '0.5rem 1.5rem', background: '#016D2D', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

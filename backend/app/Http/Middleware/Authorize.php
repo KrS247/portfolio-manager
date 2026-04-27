@@ -53,6 +53,16 @@ class Authorize {
             return response()->json(['error' => 'Insufficient permissions'], 403);
         }
 
+        // Company-level access restriction (applies after role check passes)
+        if ($user->company_id) {
+            $companyPerm = \App\Models\CompanyPermission::where('company_id', $user->company_id)
+                ->where('page_id', $page->id)
+                ->first();
+            if (!$companyPerm || !$companyPerm->can_view) {
+                return response()->json(['error' => 'Access restricted by company policy'], 403);
+            }
+        }
+
         return $next($request);
     }
 }

@@ -21,6 +21,7 @@ import DashboardAdmin from './pages/admin/DashboardAdmin';
 import TeamsAdmin from './pages/admin/TeamsAdmin';
 import CompanySetupAdmin from './pages/admin/CompanySetupAdmin';
 import WorkingCalendarAdmin from './pages/admin/WorkingCalendarAdmin';
+import CompaniesAdmin from './pages/admin/CompaniesAdmin';
 import Reports from './pages/Reports';
 import Capacity from './pages/Capacity';
 import RiskManagement from './pages/RiskManagement';
@@ -110,6 +111,11 @@ function AppRoutes() {
       <Route path="/admin/working-calendar" element={
         <ProtectedRoute pageSlug="admin.company">
           <Layout><WorkingCalendarAdmin /></Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/companies" element={
+        <ProtectedRoute pageSlug="admin.companies">
+          <Layout><CompaniesAdmin /></Layout>
         </ProtectedRoute>
       } />
 

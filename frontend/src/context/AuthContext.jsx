@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import client from '../api/client';
+import { clearPermissionsCache } from '../hooks/usePermissions';
 
 const AuthContext = createContext(null);
 
@@ -11,6 +12,9 @@ export function AuthProvider({ children }) {
   });
 
   const login = useCallback(async (username, password) => {
+    // Always clear any cached permissions from a previous session before
+    // storing new credentials — prevents stale cache causing Access Denied
+    clearPermissionsCache();
     const { data } = await client.post('/auth/login', { username, password });
     localStorage.setItem('pm_token', data.token);
     localStorage.setItem('pm_user', JSON.stringify(data.user));

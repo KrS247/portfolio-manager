@@ -14,15 +14,32 @@ class PermissionController extends Controller {
         }
         $pages = Page::all();
 
+        // Pre-load company permissions if user belongs to a company
+        $companyPerms = null;
+        if ($user->company_id) {
+            $companyPerms = \App\Models\CompanyPermission::where('company_id', $user->company_id)
+                ->get()->keyBy('page_id');
+        }
+
         $permMap = [];
         foreach ($pages as $page) {
             if ($user->role && $user->role->is_admin) {
                 $permMap[$page->slug] = 'edit';
             } else {
-                $perm = PagePermission::where('role_id', $user->role_id)
-                    ->where('page_id', $page->id)
-                    ->first();
-                $permMap[$page->slug] = $perm ? $perm->access_level : 'none';
+                $perm  = PagePermission::where('role_id', $user->role_id)
+                    ->where('page_id', $page->id)->first();
+                $level = $perm ? $perm->access_level : 'none';
+
+                // Apply company restriction: if company is set, only allow pages
+                // explicitly granted by company_permissions
+                if ($companyPerms !== null && $level !== 'none') {
+                    $cp = $companyPerms->get($page->id);
+                    if (!$cp || !$cp->can_view) {
+                        $level = 'none';
+                    }
+                }
+
+                $permMap[$page->slug] = $level;
             }
         }
 

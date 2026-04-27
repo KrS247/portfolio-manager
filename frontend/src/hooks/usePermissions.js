@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 let cache = null;
 // Bust the cache whenever the app version increments (new pages added)
 // Increment this string any time new pages are added to the DB
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 
 export function clearPermissionsCache() {
   cache = null;
@@ -24,13 +24,24 @@ export function usePermissions() {
 
     if (cache) { setPermissions(cache); setLoading(false); return; }
 
-    client.get('/permissions/me')
-      .then(({ data }) => {
-        cache = { ...data, __version: CACHE_VERSION };
-        setPermissions(cache);
-      })
-      .catch(() => setPermissions({}))
-      .finally(() => setLoading(false));
+    const fetchPerms = (attempt = 1) => {
+      client.get('/permissions/me')
+        .then(({ data }) => {
+          cache = { ...data, __version: CACHE_VERSION };
+          setPermissions(cache);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (attempt < 3) {
+            setTimeout(() => fetchPerms(attempt + 1), 800 * attempt);
+          } else {
+            // Give up — user will need to refresh or re-login
+            setPermissions({});
+            setLoading(false);
+          }
+        });
+    };
+    fetchPerms();
   }, [isAuthenticated]);
 
   // Admin users bypass all permission checks — they always have full access

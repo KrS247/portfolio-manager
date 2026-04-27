@@ -25,6 +25,7 @@ const ADMIN_ITEMS = [
   { slug: 'admin.teams',        label: 'Teams',        path: '/admin/teams' },
   { slug: 'admin.company',      label: 'Company Setup',    path: '/admin/company-setup' },
   { slug: 'admin.company',      label: 'Working Calendar', path: '/admin/working-calendar' },
+  { slug: 'admin.companies',    label: 'Companies',        path: '/admin/companies' },
 ];
 
 export default function Layout({ children }) {

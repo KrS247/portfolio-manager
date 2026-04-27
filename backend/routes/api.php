@@ -18,6 +18,7 @@ use App\Http\Controllers\ScheduleBaselineController;
 use App\Http\Controllers\EVMController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CapacityController;
+use App\Http\Controllers\CompanyController;
 
 // Public auth routes
 Route::prefix('auth')->group(function () {
@@ -98,6 +99,14 @@ Route::middleware('jwt.auth')->group(function () {
 
     // ClickUp Integration
     Route::get('clickup/task/{id}', [ClickUpController::class, 'task'])->middleware('authorize:projects,view');
+
+    // Companies
+    Route::get('companies',                              [CompanyController::class, 'index']);
+    Route::post('companies',                             [CompanyController::class, 'store'])->middleware('authorize:admin.companies,edit');
+    Route::put('companies/{id}',                         [CompanyController::class, 'update'])->middleware('authorize:admin.companies,edit');
+    Route::delete('companies/{id}',                      [CompanyController::class, 'destroy'])->middleware('authorize:admin.companies,edit');
+    Route::get('companies/{id}/permissions',             [CompanyController::class, 'getPermissions'])->middleware('authorize:admin.companies,view');
+    Route::put('companies/{id}/permissions',             [CompanyController::class, 'updatePermissions'])->middleware('authorize:admin.companies,edit');
 
     // Teams
     Route::get('teams', [TeamController::class, 'index']);
