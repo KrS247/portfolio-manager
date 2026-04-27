@@ -14,11 +14,15 @@ class PermissionController extends Controller {
         }
         $pages = Page::all();
 
-        // Pre-load company permissions if user belongs to a company
+        // Pre-load company permissions if user belongs to a company.
+        // Only apply restriction when the company has at least one row configured;
+        // an empty configuration means "not set up yet" and should not block access.
         $companyPerms = null;
         if ($user->company_id) {
-            $companyPerms = \App\Models\CompanyPermission::where('company_id', $user->company_id)
-                ->get()->keyBy('page_id');
+            $rows = \App\Models\CompanyPermission::where('company_id', $user->company_id)->get();
+            if ($rows->isNotEmpty()) {
+                $companyPerms = $rows->keyBy('page_id');
+            }
         }
 
         $permMap = [];

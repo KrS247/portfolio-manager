@@ -53,13 +53,17 @@ class Authorize {
             return response()->json(['error' => 'Insufficient permissions'], 403);
         }
 
-        // Company-level access restriction (applies after role check passes)
+        // Company-level access restriction (applies after role check passes).
+        // Only restrict when the company has at least one permission row configured.
         if ($user->company_id) {
-            $companyPerm = \App\Models\CompanyPermission::where('company_id', $user->company_id)
-                ->where('page_id', $page->id)
-                ->first();
-            if (!$companyPerm || !$companyPerm->can_view) {
-                return response()->json(['error' => 'Access restricted by company policy'], 403);
+            $companyConfigured = \App\Models\CompanyPermission::where('company_id', $user->company_id)->exists();
+            if ($companyConfigured) {
+                $companyPerm = \App\Models\CompanyPermission::where('company_id', $user->company_id)
+                    ->where('page_id', $page->id)
+                    ->first();
+                if (!$companyPerm || !$companyPerm->can_view) {
+                    return response()->json(['error' => 'Access restricted by company policy'], 403);
+                }
             }
         }
 

@@ -22,6 +22,29 @@ router.get('/me', authenticate, (req, res, next) => {
 
     const map = {};
     rows.forEach(r => { map[r.slug] = r.access_level || 'none'; });
+
+    // Apply company restrictions only when the company has configured permissions.
+    // If a company has zero rows in company_permissions it is "not set up yet" and
+    // should not restrict access.
+    if (req.user.company_id) {
+      const companyRows = db.prepare(
+        'SELECT page_id, can_view FROM company_permissions WHERE company_id = ?'
+      ).all(req.user.company_id);
+
+      if (companyRows.length > 0) {
+        const companyMap = {};
+        companyRows.forEach(r => { companyMap[r.page_id] = r.can_view; });
+        const pages = db.prepare('SELECT id, slug FROM pages').all();
+        pages.forEach(p => {
+          if (map[p.slug] && map[p.slug] !== 'none') {
+            if (!companyMap[p.id]) {
+              map[p.slug] = 'none';
+            }
+          }
+        });
+      }
+    }
+
     res.json(map);
   } catch (err) { next(err); }
 });
