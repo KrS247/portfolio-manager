@@ -34,15 +34,26 @@ Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' =>
 // Temporary DB diagnostic (remove after confirming production DB)
 Route::get('/db-check', function() {
     try {
-        $conn = config('database.default');
-        $db   = config("database.connections.$conn.database");
-        $tables = \Illuminate\Support\Facades\DB::select(
+        $conn     = config('database.default');
+        $dbConf   = config("database.connections.$conn.database");
+        $appBase  = base_path();
+        $snapshot = $appBase . '/database/portfolio_snapshot';
+        $dbFile   = $appBase . '/database/portfolio.db';
+        $tables   = \Illuminate\Support\Facades\DB::select(
             $conn === 'sqlite'
                 ? "SELECT name FROM sqlite_master WHERE type='table'"
                 : "SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public'"
         );
         $userCount = \Illuminate\Support\Facades\DB::table('users')->count();
-        return response()->json(['connection' => $conn, 'database' => $db, 'table_count' => count($tables), 'user_count' => $userCount]);
+        return response()->json([
+            'connection'      => $conn,
+            'db_config'       => $dbConf,
+            'table_count'     => count($tables),
+            'user_count'      => $userCount,
+            'snapshot_bytes'  => file_exists($snapshot) ? filesize($snapshot) : 'MISSING',
+            'db_bytes'        => file_exists($dbFile)   ? filesize($dbFile)   : 'MISSING',
+            'app_base'        => $appBase,
+        ]);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()]);
     }
