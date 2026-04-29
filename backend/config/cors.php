@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_filter(array_map('trim', explode(',', env('FRONTEND_ORIGIN', 'http://localhost:5173')))),
+    'allowed_origins' => env('FRONTEND_ORIGIN', 'http://localhost:5173') === '*'
+        ? ['*']
+        : array_filter(array_map('trim', explode(',', env('FRONTEND_ORIGIN', 'http://localhost:5173')))),
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +31,8 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    // JWT auth uses Authorization headers — credentials (cookies) not needed.
+    // Must be false when allowed_origins is ['*'].
+    'supports_credentials' => env('FRONTEND_ORIGIN', 'http://localhost:5173') !== '*',
 
 ];
