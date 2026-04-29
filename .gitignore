@@ -12,6 +12,7 @@ frontend/.vite/
 .env.*.local
 backend/.env
 backend-node/.env
+.sync-secrets
 
 # SQLite databases
 *.db
