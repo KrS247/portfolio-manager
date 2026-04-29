@@ -14,10 +14,11 @@ backend/.env
 backend-node/.env
 .sync-secrets
 
-# SQLite databases
+# SQLite databases (exclude all except the Railway-deployed snapshot)
 *.db
 *.sqlite
 *.sqlite3
+!backend/database/portfolio.db
 
 # Laravel
 backend/bootstrap/cache/*.php

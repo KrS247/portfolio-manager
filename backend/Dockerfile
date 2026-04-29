@@ -25,6 +25,15 @@ RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions sto
     && chmod -R 775 storage bootstrap/cache \
     && chmod 664 database/portfolio.db 2>/dev/null || true
 
+# Startup script: create DB from migrations if snapshot not present
+RUN printf '#!/bin/sh\n\
+if [ ! -f /app/database/portfolio.db ]; then\n\
+  echo "[startup] portfolio.db not found — running migrations..."\n\
+  php artisan migrate --force --no-interaction\n\
+fi\n\
+exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n' > /app/start.sh \
+    && chmod +x /app/start.sh
+
 EXPOSE 8080
 
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+CMD ["/app/start.sh"]
