@@ -20,25 +20,19 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 # Copy application code
 COPY . .
 
-# Set permissions
+# Set permissions and restore the SQLite snapshot.
+# portfolio_snapshot has no .db extension so it is never excluded by *.db gitignore rules.
 RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
     && chmod -R 775 storage bootstrap/cache \
-    && chmod 664 database/portfolio.db 2>/dev/null || true
-
-# Startup script: verify DB has tables before serving
-RUN printf '#!/bin/sh\n\
-DB=/app/database/portfolio.db\n\
-echo "[startup] Checking DB at $DB ..."\n\
-ls -lh $DB 2>/dev/null || echo "[startup] WARNING: $DB not found"\n\
-TABLE_COUNT=$(php -r "try { \\$db = new PDO('"'"'sqlite:'"'"'.getenv('"'"'DB_DATABASE'"'"').'"'"''"'"'); echo \\$db->query(\"SELECT count(*) FROM sqlite_master WHERE type='"'"'table'"'"'\")->fetchColumn(); } catch (Exception \\$e) { echo 0; }" 2>/dev/null || echo 0)\n\
-echo "[startup] Tables found: $TABLE_COUNT"\n\
-if [ "$TABLE_COUNT" -lt 5 ]; then\n\
-  echo "[startup] DB missing or empty — running migrations..."\n\
-  php artisan migrate --force --no-interaction\n\
-fi\n\
-exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n' > /app/start.sh \
-    && chmod +x /app/start.sh
+    && if [ -f database/portfolio_snapshot ]; then \
+         cp database/portfolio_snapshot database/portfolio.db; \
+         chmod 664 database/portfolio.db; \
+         echo "portfolio.db restored from snapshot ($(wc -c < database/portfolio.db) bytes)"; \
+       else \
+         echo "WARNING: portfolio_snapshot not found"; \
+       fi
 
 EXPOSE 8080
 
-CMD ["/app/start.sh"]
+# Use shell form so $PORT env var is expanded at runtime
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}

@@ -7,6 +7,7 @@ RAILWAY="/Users/christopherganesh/.npm-global/bin/railway"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SQLITE_SRC="$SCRIPT_DIR/backend-node/data/portfolio.db"
 SQLITE_DEST="$SCRIPT_DIR/backend/database/portfolio.db"
+SQLITE_SNAPSHOT="$SCRIPT_DIR/backend/database/portfolio_snapshot"
 
 echo "======================================"
 echo "  Portfolio Manager — Cloud Sync"
@@ -21,7 +22,8 @@ $PHP "$SCRIPT_DIR/sync-to-cloud.php"
 echo ""
 echo "📦 Step 2: Copying SQLite snapshot for Railway deployment..."
 cp "$SQLITE_SRC" "$SQLITE_DEST"
-echo "  ✅ Copied portfolio.db to backend/database/"
+cp "$SQLITE_SRC" "$SQLITE_SNAPSHOT"   # extension-free copy — never excluded by *.db gitignore
+echo "  ✅ Copied portfolio.db + portfolio_snapshot to backend/database/"
 
 # Step 3: Redeploy Railway backend with latest data
 echo ""
