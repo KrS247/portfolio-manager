@@ -13,6 +13,9 @@ class ProgramController extends Controller {
         if ($request->portfolio_id) {
             $query->where('portfolio_id', $request->portfolio_id);
         }
+        if ($this->isPM($request)) {
+            $query->where('owner_id', $request->attributes->get('auth_user')->id);
+        }
         $programs = $query->get()->map(function($prog) {
             $projectIds = Project::where('program_id', $prog->id)->pluck('id');
             $project_count = $projectIds->count();
@@ -47,10 +50,18 @@ class ProgramController extends Controller {
         return response()->json($programs);
     }
 
-    public function show($id) {
+    public function show(Request $request, $id) {
         $program = Program::with('owner')->findOrFail($id);
-        $projects = Project::where('program_id', $id)->with('owner')->get();
-        $tasks = Task::where('parent_type', 'program')->where('parent_id', $id)->get();
+        $projectQuery = Project::where('program_id', $id)->with('owner');
+        if ($this->isPM($request)) {
+            $projectQuery->where('owner_id', $request->attributes->get('auth_user')->id);
+        }
+        $projects = $projectQuery->get();
+        $taskQuery = Task::where('parent_type', 'program')->where('parent_id', $id);
+        if ($this->isPM($request)) {
+            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
+        }
+        $tasks = $taskQuery->get();
 
         return response()->json(array_merge($program->toArray(), [
             'projects' => $projects,
@@ -71,18 +82,42 @@ class ProgramController extends Controller {
             'owner_id' => 'nullable|integer',
         ]);
 
+        if ($this->isPM($request)) {
+            $data['owner_id'] = $request->attributes->get('auth_user')->id;
+        }
+
         $program = Program::create($data);
         return response()->json($program, 201);
     }
 
     public function update(Request $request, $id) {
         $program = Program::findOrFail($id);
-        $program->update($request->only(['portfolio_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id']));
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ((int)$program->owner_id !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only edit your own programs'], 403);
+            }
+            $fields = $request->only(['portfolio_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date']);
+        } else {
+            $fields = $request->only(['portfolio_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id']);
+        }
+
+        $program->update($fields);
         return response()->json($program);
     }
 
-    public function destroy($id) {
-        Program::findOrFail($id)->delete();
+    public function destroy(Request $request, $id) {
+        $program = Program::findOrFail($id);
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ((int)$program->owner_id !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only delete your own programs'], 403);
+            }
+        }
+
+        $program->delete();
         return response()->json(['message' => 'Program deleted']);
     }
 }

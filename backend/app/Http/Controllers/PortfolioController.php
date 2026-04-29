@@ -8,8 +8,12 @@ use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 
 class PortfolioController extends Controller {
-    public function index() {
-        $portfolios = Portfolio::with('owner')->get()->map(function($p) {
+    public function index(Request $request) {
+        $query = Portfolio::with('owner');
+        if ($this->isPM($request)) {
+            $query->where('owner_id', $request->attributes->get('auth_user')->id);
+        }
+        $portfolios = $query->get()->map(function($p) {
             $programIds = Program::where('portfolio_id', $p->id)->pluck('id');
             $projectIds = \App\Models\Project::whereIn('program_id', $programIds)->pluck('id');
 
@@ -67,10 +71,18 @@ class PortfolioController extends Controller {
         return response()->json($portfolios);
     }
 
-    public function show($id) {
+    public function show(Request $request, $id) {
         $portfolio = Portfolio::with('owner')->findOrFail($id);
-        $programs = Program::where('portfolio_id', $id)->with('owner')->get();
-        $tasks = Task::where('parent_type', 'portfolio')->where('parent_id', $id)->get();
+        $programQuery = Program::where('portfolio_id', $id)->with('owner');
+        if ($this->isPM($request)) {
+            $programQuery->where('owner_id', $request->attributes->get('auth_user')->id);
+        }
+        $programs = $programQuery->get();
+        $taskQuery = Task::where('parent_type', 'portfolio')->where('parent_id', $id);
+        if ($this->isPM($request)) {
+            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
+        }
+        $tasks = $taskQuery->get();
 
         return response()->json(array_merge($portfolio->toArray(), [
             'programs' => $programs,
@@ -90,18 +102,43 @@ class PortfolioController extends Controller {
             'owner_id' => 'nullable|integer',
         ]);
 
+        // Project managers are automatically the owner of everything they create
+        if ($this->isPM($request)) {
+            $data['owner_id'] = $request->attributes->get('auth_user')->id;
+        }
+
         $portfolio = Portfolio::create($data);
         return response()->json($portfolio, 201);
     }
 
     public function update(Request $request, $id) {
         $portfolio = Portfolio::findOrFail($id);
-        $portfolio->update($request->only(['name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id']));
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ((int)$portfolio->owner_id !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only edit your own portfolios'], 403);
+            }
+            $fields = $request->only(['name', 'description', 'status', 'priority', 'start_date', 'end_date']);
+        } else {
+            $fields = $request->only(['name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id']);
+        }
+
+        $portfolio->update($fields);
         return response()->json($portfolio);
     }
 
-    public function destroy($id) {
-        Portfolio::findOrFail($id)->delete();
+    public function destroy(Request $request, $id) {
+        $portfolio = Portfolio::findOrFail($id);
+
+        if ($this->isPM($request)) {
+            $authUser = $request->attributes->get('auth_user');
+            if ((int)$portfolio->owner_id !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only delete your own portfolios'], 403);
+            }
+        }
+
+        $portfolio->delete();
         return response()->json(['message' => 'Portfolio deleted']);
     }
 }

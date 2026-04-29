@@ -7,11 +7,6 @@ use App\Models\Task;
 use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller {
-    private function isPM(Request $request): bool {
-        $user = $request->attributes->get('auth_user');
-        return $user && $user->role && $user->role->name === 'project_manager';
-    }
-
     public function index(Request $request) {
         $query = Project::with('owner');
         if ($request->program_id) {
@@ -70,15 +65,18 @@ class ProjectController extends Controller {
         // PM can only access their own projects
         if ($this->isPM($request)) {
             $authUser = $request->attributes->get('auth_user');
-            if ($project->owner_id !== $authUser->id) {
+            if ((int)$project->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'Project not found'], 404);
             }
         }
 
-        $tasks = Task::where('parent_type', 'project')->where('parent_id', $id)
+        $taskQuery = Task::where('parent_type', 'project')->where('parent_id', $id)
             ->with('risk', 'assignedUser')
-            ->orderBy('sequence')
-            ->get();
+            ->orderBy('sequence');
+        if ($this->isPM($request)) {
+            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
+        }
+        $tasks = $taskQuery->get();
 
         return response()->json(array_merge($project->toArray(), [
             'tasks' => $tasks,
@@ -112,7 +110,7 @@ class ProjectController extends Controller {
 
         if ($this->isPM($request)) {
             $authUser = $request->attributes->get('auth_user');
-            if ($project->owner_id !== $authUser->id) {
+            if ((int)$project->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only edit your own projects'], 403);
             }
             // PM cannot reassign ownership
@@ -130,7 +128,7 @@ class ProjectController extends Controller {
 
         if ($this->isPM($request)) {
             $authUser = $request->attributes->get('auth_user');
-            if ($project->owner_id !== $authUser->id) {
+            if ((int)$project->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only delete your own projects'], 403);
             }
         }

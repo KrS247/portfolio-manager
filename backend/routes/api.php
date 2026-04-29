@@ -31,6 +31,7 @@ Route::prefix('auth')->group(function () {
 // Health check
 Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()]));
 
+
 // Protected routes
 Route::middleware('jwt.auth')->group(function () {
     // Permissions

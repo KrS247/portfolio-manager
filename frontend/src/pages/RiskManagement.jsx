@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../context/AuthContext';
 
 const RISK_COLOR = {
   'Critical Risk': { bg: '#fef2f2', border: '#fca5a5', badge: '#dc2626', text: '#991b1b' },
@@ -19,12 +20,14 @@ const taskUrl = (risk) => {
 
 export default function RiskManagement() {
   const { data: risks, loading } = useApi('/risks');
+  const { user } = useAuth();
 
-  const [search,     setSearch]     = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [search,          setSearch]          = useState('');
+  const [filterStatus,    setFilterStatus]    = useState('all');
   const [filterPortfolio, setFilterPortfolio] = useState('all');
-  const [sortField, setSortField]   = useState('risk_rate');
-  const [sortDir,   setSortDir]     = useState('desc');
+  const [myRisksOnly,     setMyRisksOnly]     = useState(false);
+  const [sortField,       setSortField]       = useState('risk_rate');
+  const [sortDir,         setSortDir]         = useState('desc');
 
   const portfolios = useMemo(() => {
     if (!risks) return [];
@@ -42,6 +45,7 @@ export default function RiskManagement() {
   const filtered = useMemo(() => {
     if (!risks) return [];
     let list = risks.filter(r => r.task_title); // skip risks with deleted tasks
+    if (myRisksOnly && user) list = list.filter(r => Number(r.task_created_by) === Number(user.id));
     if (filterStatus !== 'all') list = list.filter(r => r.risk_status === filterStatus);
     if (filterPortfolio !== 'all') list = list.filter(r => String(r.portfolio_id) === filterPortfolio);
     if (search.trim()) {
@@ -66,7 +70,7 @@ export default function RiskManagement() {
       return sortDir === 'asc' ? av - bv : bv - av;
     });
     return list;
-  }, [risks, filterStatus, filterPortfolio, search, sortField, sortDir]);
+  }, [risks, myRisksOnly, user, filterStatus, filterPortfolio, search, sortField, sortDir]);
 
   const counts = useMemo(() => {
     if (!risks) return {};
@@ -126,6 +130,18 @@ export default function RiskManagement() {
           <option value="all">All Risk Levels</option>
           {STATUS_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <button
+          onClick={() => setMyRisksOnly(v => !v)}
+          style={{
+            ...styles.myRisksBtn,
+            background: myRisksOnly ? '#016D2D' : '#fff',
+            color:      myRisksOnly ? '#fff'    : '#374151',
+            border:     myRisksOnly ? '1px solid #016D2D' : '1px solid #e5e7eb',
+          }}
+          title="Show only risks on tasks you created"
+        >
+          👤 My Risks
+        </button>
       </div>
 
       {/* Table */}
@@ -270,6 +286,7 @@ const styles = {
   filtersRow:  { display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' },
   searchInput: { flex: '1 1 220px', padding: '0.45rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.88rem', outline: 'none' },
   select:      { padding: '0.45rem 0.65rem', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '0.88rem', background: '#fff', cursor: 'pointer' },
+  myRisksBtn:  { padding: '0.45rem 0.9rem', borderRadius: '8px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' },
   loading:     { color: '#9ca3af', padding: '2rem 0', textAlign: 'center' },
   empty:       { color: '#6b7280', padding: '2rem 0', textAlign: 'center', fontSize: '0.95rem' },
   tableWrap:   { background: '#fff', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'auto' },

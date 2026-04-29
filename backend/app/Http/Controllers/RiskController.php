@@ -20,8 +20,9 @@ class RiskController extends Controller {
             $task = $risk->task;
             $row  = $risk->toArray();
 
-            $row['task_title']  = $task?->title;
-            $row['task_status'] = $task?->status;
+            $row['task_title']      = $task?->title;
+            $row['task_status']     = $task?->status;
+            $row['task_created_by'] = $task?->created_by;
 
             $projectId = $programId = $portfolioId = null;
             $projectName = $programName = $portfolioName = null;

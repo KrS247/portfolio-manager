@@ -6,6 +6,8 @@ const authorize = require('../middleware/authorize');
 const router = express.Router();
 const GAP = 1000;
 
+const isPM = (req) => req.user.role_name === 'project_manager';
+
 function getParentExists(parent_type, parent_id) {
   const table = { portfolio: 'portfolios', program: 'programs', project: 'projects' }[parent_type];
   if (!table) return false;
@@ -56,15 +58,17 @@ router.get('/', authenticate, authorize('tasks', 'view'), (req, res, next) => {
     if (parent_id)   { query += ' AND t.parent_id = ?';   params.push(parent_id); }
     if (assigned_to) { query += ' AND t.assigned_to = ?'; params.push(assigned_to); }
     if (status)      { query += ' AND t.status = ?';      params.push(status); }
+    // PM sees only tasks they created
+    if (isPM(req)) { query += ' AND t.created_by = ?'; params.push(req.user.id); }
     query += ' ORDER BY t.sequence ASC, t.priority ASC';
     res.json(db.prepare(query).all(...params));
   } catch (err) { next(err); }
 });
 
-// GET /api/tasks/high-risk — tasks with risk_rate > 14, enriched with project & program context
+// GET /api/tasks/high-risk
 router.get('/high-risk', authenticate, authorize('tasks', 'view'), (req, res, next) => {
   try {
-    const rows = db.prepare(`
+    let query = `
       SELECT
         t.id, t.title, t.status, t.parent_type, t.parent_id,
         r.risk_rate, r.risk_status,
@@ -86,17 +90,19 @@ router.get('/high-risk', authenticate, authorize('tasks', 'view'), (req, res, ne
       LEFT JOIN programs  prog  ON proj.program_id = prog.id
       LEFT JOIN programs  prog2 ON t.parent_type = 'program' AND t.parent_id = prog2.id
       WHERE r.risk_rate > 14
-      ORDER BY r.risk_rate DESC, t.title ASC
-    `).all();
-    res.json(rows);
+    `;
+    const params = [];
+    if (isPM(req)) { query += ' AND t.created_by = ?'; params.push(req.user.id); }
+    query += ' ORDER BY r.risk_rate DESC, t.title ASC';
+    res.json(db.prepare(query).all(...params));
   } catch (err) { next(err); }
 });
 
-// GET /api/tasks/overdue — non-completed tasks whose due_date < today, with project & program context
+// GET /api/tasks/overdue
 router.get('/overdue', authenticate, authorize('tasks', 'view'), (req, res, next) => {
   try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const rows = db.prepare(`
+    const today = new Date().toISOString().slice(0, 10);
+    let query = `
       SELECT
         t.id, t.title, t.status, t.due_date, t.parent_type, t.parent_id,
         CASE WHEN t.parent_type = 'project' THEN proj.id   ELSE NULL END AS project_id,
@@ -119,16 +125,18 @@ router.get('/overdue', authenticate, authorize('tasks', 'view'), (req, res, next
         AND t.due_date < ?
         AND t.status NOT IN ('completed', 'cancelled')
         AND t.is_milestone = 0
-      ORDER BY t.due_date ASC, t.title ASC
-    `).all(today);
-    res.json(rows);
+    `;
+    const params = [today];
+    if (isPM(req)) { query += ' AND t.created_by = ?'; params.push(req.user.id); }
+    query += ' ORDER BY t.due_date ASC, t.title ASC';
+    res.json(db.prepare(query).all(...params));
   } catch (err) { next(err); }
 });
 
-// GET /api/tasks/over-budget — tasks where any resource has actual_hours > estimated_hours
+// GET /api/tasks/over-budget
 router.get('/over-budget', authenticate, authorize('tasks', 'view'), (req, res, next) => {
   try {
-    const rows = db.prepare(`
+    let query = `
       SELECT
         t.id, t.title, t.status, t.parent_type, t.parent_id,
         ROUND(SUM(CASE
@@ -158,10 +166,11 @@ router.get('/over-budget', authenticate, authorize('tasks', 'view'), (req, res, 
       WHERE tr.actual_hours IS NOT NULL
         AND tr.estimated_hours IS NOT NULL
         AND tr.actual_hours > tr.estimated_hours
-      GROUP BY t.id
-      ORDER BY hours_over DESC, t.title ASC
-    `).all();
-    res.json(rows);
+    `;
+    const params = [];
+    if (isPM(req)) { query += ' AND t.created_by = ?'; params.push(req.user.id); }
+    query += ' GROUP BY t.id ORDER BY hours_over DESC, t.title ASC';
+    res.json(db.prepare(query).all(...params));
   } catch (err) { next(err); }
 });
 
@@ -177,6 +186,10 @@ router.get('/:id', authenticate, authorize('tasks', 'view'), (req, res, next) =>
       WHERE t.id = ?
     `).get(req.params.id);
     if (!task) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
+    // PM can only see their own tasks
+    if (isPM(req) && task.created_by !== req.user.id) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
+    }
     res.json(task);
   } catch (err) { next(err); }
 });
@@ -199,10 +212,17 @@ router.post('/', authenticate, authorize('tasks', 'edit'), (req, res, next) => {
     const pct = Math.min(100, Math.max(0, parseInt(percent_complete) || 0));
     const milestone = is_milestone ? 1 : 0;
     const sequence = getNextSequence(parent_type, parent_id);
+
     const result = db.prepare(`
-      INSERT INTO tasks (title, description, priority, sequence, status, percent_complete, start_date, due_date, is_milestone, assigned_to, parent_type, parent_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(title, description || null, priority, sequence, status, pct, milestone ? null : (start_date || null), due_date || null, milestone, assigned_to || null, parent_type, parent_id);
+      INSERT INTO tasks (title, description, priority, sequence, status, percent_complete,
+        start_date, due_date, is_milestone, assigned_to, parent_type, parent_id, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      title, description || null, priority, sequence, status, pct,
+      milestone ? null : (start_date || null), due_date || null, milestone,
+      assigned_to || null, parent_type, parent_id,
+      req.user.id   // always record the creator
+    );
 
     res.status(201).json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid));
   } catch (err) { next(err); }
@@ -213,10 +233,14 @@ router.put('/:id', authenticate, authorize('tasks', 'edit'), (req, res, next) =>
   try {
     const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
+
+    if (isPM(req) && existing.created_by !== req.user.id) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You can only edit your own tasks' } });
+    }
+
     const { title, description, priority, status, start_date, due_date, assigned_to, percent_complete, is_milestone } = req.body;
     const pct = percent_complete != null ? Math.min(100, Math.max(0, parseInt(percent_complete) || 0)) : null;
     const milestone = is_milestone != null ? (is_milestone ? 1 : 0) : null;
-    // Milestones have no start_date; clear it when setting milestone=1
     const effectiveStartDate = milestone === 1 ? null : (start_date ?? null);
     db.prepare(`
       UPDATE tasks SET title = COALESCE(?, title), description = COALESCE(?, description),
@@ -231,21 +255,19 @@ router.put('/:id', authenticate, authorize('tasks', 'edit'), (req, res, next) =>
   } catch (err) { next(err); }
 });
 
-// PUT /api/tasks/:id/sequence — reorder task within its parent scope
+// PUT /api/tasks/:id/sequence
 router.put('/:id/sequence', authenticate, authorize('tasks', 'edit'), (req, res, next) => {
   try {
     const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!task) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
 
-    const { after_id } = req.body; // null = move to top
-
+    const { after_id } = req.body;
     const scopedTasks = db.prepare(
       'SELECT id, sequence FROM tasks WHERE parent_type = ? AND parent_id = ? AND id != ? ORDER BY sequence ASC'
     ).all(task.parent_type, task.parent_id, task.id);
 
     let newSeq;
     if (after_id == null) {
-      // Move to top
       const first = scopedTasks[0];
       newSeq = first ? Math.floor(first.sequence / 2) : GAP;
       if (newSeq <= 0) { renumberScope(task.parent_type, task.parent_id); newSeq = GAP / 2; }
@@ -255,17 +277,16 @@ router.put('/:id/sequence', authenticate, authorize('tasks', 'edit'), (req, res,
         return res.status(400).json({ error: { code: 'INVALID_AFTER_ID', message: 'after_id not found in same scope' } });
       }
       const afterTask = scopedTasks[afterIdx];
-      const nextTask = scopedTasks[afterIdx + 1];
+      const nextTask  = scopedTasks[afterIdx + 1];
       if (nextTask) {
         newSeq = Math.floor((afterTask.sequence + nextTask.sequence) / 2);
         if (newSeq === afterTask.sequence) {
           renumberScope(task.parent_type, task.parent_id);
-          // Recalculate after renumber
           const refreshed = db.prepare(
             'SELECT id, sequence FROM tasks WHERE parent_type = ? AND parent_id = ? AND id != ? ORDER BY sequence ASC'
           ).all(task.parent_type, task.parent_id, task.id);
           const rAfter = refreshed.find(t => t.id === after_id);
-          const rNext = refreshed[refreshed.findIndex(t => t.id === after_id) + 1];
+          const rNext  = refreshed[refreshed.findIndex(t => t.id === after_id) + 1];
           newSeq = rNext ? Math.floor((rAfter.sequence + rNext.sequence) / 2) : rAfter.sequence + GAP;
         }
       } else {
@@ -278,7 +299,7 @@ router.put('/:id/sequence', authenticate, authorize('tasks', 'edit'), (req, res,
   } catch (err) { next(err); }
 });
 
-// GET /api/tasks/:id/dependencies — returns tasks this task depends on
+// GET /api/tasks/:id/dependencies
 router.get('/:id/dependencies', authenticate, authorize('tasks', 'view'), (req, res, next) => {
   try {
     const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
@@ -294,7 +315,7 @@ router.get('/:id/dependencies', authenticate, authorize('tasks', 'view'), (req, 
   } catch (err) { next(err); }
 });
 
-// PUT /api/tasks/:id/dependencies — replace all dependencies for a task
+// PUT /api/tasks/:id/dependencies
 router.put('/:id/dependencies', authenticate, authorize('tasks', 'edit'), (req, res, next) => {
   try {
     const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
@@ -313,12 +334,11 @@ router.put('/:id/dependencies', authenticate, authorize('tasks', 'edit'), (req, 
   } catch (err) { next(err); }
 });
 
-// GET /api/tasks/:id/resources — returns users assigned to this task with hours
+// GET /api/tasks/:id/resources
 router.get('/:id/resources', authenticate, authorize('tasks', 'view'), (req, res, next) => {
   try {
     const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
     if (!task) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
-
     const resources = db.prepare(`
       SELECT tr.user_id, tr.estimated_hours, tr.actual_hours, u.username, u.email, u.hourly_rate
       FROM task_resources tr
@@ -326,12 +346,11 @@ router.get('/:id/resources', authenticate, authorize('tasks', 'view'), (req, res
       WHERE tr.task_id = ?
       ORDER BY u.username
     `).all(req.params.id);
-
     res.json(resources);
   } catch (err) { next(err); }
 });
 
-// PUT /api/tasks/:id/resources — replace all resource assignments for a task
+// PUT /api/tasks/:id/resources
 router.put('/:id/resources', authenticate, authorize('tasks', 'edit'), (req, res, next) => {
   try {
     const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
@@ -346,9 +365,7 @@ router.put('/:id/resources', authenticate, authorize('tasks', 'edit'), (req, res
         'INSERT OR REPLACE INTO task_resources (task_id, user_id, estimated_hours, actual_hours) VALUES (?, ?, ?, ?)'
       );
       for (const r of valid) {
-        insert.run(
-          req.params.id,
-          r.user_id,
+        insert.run(req.params.id, r.user_id,
           r.estimated_hours != null ? parseFloat(r.estimated_hours) : null,
           r.actual_hours    != null ? parseFloat(r.actual_hours)    : null
         );
@@ -362,7 +379,6 @@ router.put('/:id/resources', authenticate, authorize('tasks', 'edit'), (req, res
       WHERE tr.task_id = ?
       ORDER BY u.username
     `).all(req.params.id);
-
     res.json(saved);
   } catch (err) { next(err); }
 });
@@ -370,8 +386,11 @@ router.put('/:id/resources', authenticate, authorize('tasks', 'edit'), (req, res
 // DELETE /api/tasks/:id
 router.delete('/:id', authenticate, authorize('tasks', 'edit'), (req, res, next) => {
   try {
-    const existing = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, created_by FROM tasks WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
+    if (isPM(req) && existing.created_by !== req.user.id) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You can only delete your own tasks' } });
+    }
     db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
     res.json({ message: 'Task deleted successfully' });
   } catch (err) { next(err); }

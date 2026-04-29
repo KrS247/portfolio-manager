@@ -9,7 +9,9 @@ class Authorize {
     public function handle(Request $request, Closure $next, string $pageSlug, string $requiredLevel = 'view') {
         $user = $request->attributes->get('auth_user');
 
-        // Fallback: try to get from JWT if not set in attributes
+        // Fallback: try to get from JWT if not set in attributes.
+        // This happens when the tymon jwt.auth package middleware runs instead
+        // of our custom JwtAuthenticate, which means auth_user is not in attributes.
         if (!$user || !($user instanceof \App\Models\User)) {
             try {
                 $tokenUser = \Tymon\JWTAuth\Facades\JWTAuth::parseToken()->authenticate();
@@ -29,6 +31,10 @@ class Authorize {
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
+
+        // Always write the user back into request attributes so controllers
+        // and isPM() can reliably find it regardless of which auth middleware ran.
+        $request->attributes->set('auth_user', $user);
 
         // Admin bypasses all permission checks
         if ($user->role && $user->role->is_admin) {

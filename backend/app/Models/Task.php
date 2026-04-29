@@ -9,6 +9,7 @@ class Task extends Model {
         'start_date', 'due_date', 'is_milestone', 'assigned_to', 'parent_type', 'parent_id', 'parent_task_id',
         'constraint_type', 'constraint_date', 'schedule_mode',
         'early_start', 'early_finish', 'late_start', 'late_finish', 'float_days', 'duration_days',
+        'created_by',
     ];
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';

@@ -69,23 +69,19 @@ router.get('/:id', authenticate, authorize('projects', 'view'), (req, res, next)
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
     }
 
-    const tasksQuery = isPM(req)
-      ? `SELECT t.*, u.username AS assigned_to_name,
-               r.id AS risk_id, r.risk_status, r.risk_rate
-         FROM tasks t
-         LEFT JOIN users u ON u.id = t.assigned_to
-         LEFT JOIN risks r ON r.task_id = t.id
-         WHERE t.parent_type = 'project' AND t.parent_id = ?
-         ORDER BY t.sequence ASC, t.priority ASC`
-      : `SELECT t.*, u.username AS assigned_to_name,
-               r.id AS risk_id, r.risk_status, r.risk_rate
-         FROM tasks t
-         LEFT JOIN users u ON u.id = t.assigned_to
-         LEFT JOIN risks r ON r.task_id = t.id
-         WHERE t.parent_type = 'project' AND t.parent_id = ?
-         ORDER BY t.sequence ASC, t.priority ASC`;
+    let tasksQuery = `
+      SELECT t.*, u.username AS assigned_to_name,
+             r.id AS risk_id, r.risk_status, r.risk_rate
+      FROM tasks t
+      LEFT JOIN users u ON u.id = t.assigned_to
+      LEFT JOIN risks r ON r.task_id = t.id
+      WHERE t.parent_type = 'project' AND t.parent_id = ?
+    `;
+    const tasksParams = [req.params.id];
+    if (isPM(req)) { tasksQuery += ' AND t.created_by = ?'; tasksParams.push(req.user.id); }
+    tasksQuery += ' ORDER BY t.sequence ASC, t.priority ASC';
 
-    const tasks = db.prepare(tasksQuery).all(req.params.id);
+    const tasks = db.prepare(tasksQuery).all(...tasksParams);
 
     // Attach dependency ids to each task
     const taskIds = tasks.map(t => t.id);
