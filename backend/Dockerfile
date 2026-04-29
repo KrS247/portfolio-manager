@@ -25,10 +25,15 @@ RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions sto
     && chmod -R 775 storage bootstrap/cache \
     && chmod 664 database/portfolio.db 2>/dev/null || true
 
-# Startup script: create DB from migrations if snapshot not present
+# Startup script: verify DB has tables before serving
 RUN printf '#!/bin/sh\n\
-if [ ! -f /app/database/portfolio.db ]; then\n\
-  echo "[startup] portfolio.db not found — running migrations..."\n\
+DB=/app/database/portfolio.db\n\
+echo "[startup] Checking DB at $DB ..."\n\
+ls -lh $DB 2>/dev/null || echo "[startup] WARNING: $DB not found"\n\
+TABLE_COUNT=$(php -r "try { \\$db = new PDO('"'"'sqlite:'"'"'.getenv('"'"'DB_DATABASE'"'"').'"'"''"'"'); echo \\$db->query(\"SELECT count(*) FROM sqlite_master WHERE type='"'"'table'"'"'\")->fetchColumn(); } catch (Exception \\$e) { echo 0; }" 2>/dev/null || echo 0)\n\
+echo "[startup] Tables found: $TABLE_COUNT"\n\
+if [ "$TABLE_COUNT" -lt 5 ]; then\n\
+  echo "[startup] DB missing or empty — running migrations..."\n\
   php artisan migrate --force --no-interaction\n\
 fi\n\
 exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n' > /app/start.sh \

@@ -31,6 +31,23 @@ Route::prefix('auth')->group(function () {
 // Health check
 Route::get('/health', fn() => response()->json(['status' => 'ok', 'timestamp' => now()]));
 
+// Temporary DB diagnostic (remove after confirming production DB)
+Route::get('/db-check', function() {
+    try {
+        $conn = config('database.default');
+        $db   = config("database.connections.$conn.database");
+        $tables = \Illuminate\Support\Facades\DB::select(
+            $conn === 'sqlite'
+                ? "SELECT name FROM sqlite_master WHERE type='table'"
+                : "SELECT table_name AS name FROM information_schema.tables WHERE table_schema='public'"
+        );
+        $userCount = \Illuminate\Support\Facades\DB::table('users')->count();
+        return response()->json(['connection' => $conn, 'database' => $db, 'table_count' => count($tables), 'user_count' => $userCount]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()]);
+    }
+});
+
 
 // Protected routes
 Route::middleware('jwt.auth')->group(function () {
