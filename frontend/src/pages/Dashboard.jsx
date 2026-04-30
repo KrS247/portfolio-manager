@@ -498,7 +498,7 @@ function statusStyle(status) {
 function StatCard({ label, value, bg, loading }) {
   return (
     <div style={{ ...styles.card, background: bg }}>
-      <div style={styles.cardValue}>{loading ? '...' : value}</div>
+      <div style={styles.cardValue}>{loading ? '…' : value}</div>
       <div style={styles.cardLabel}>{label}</div>
     </div>
   );
@@ -508,9 +508,9 @@ const styles = {
   heading:      { fontSize: '1.6rem', fontWeight: 800, color: '#1d1d1d', marginBottom: '0.25rem' },
   sub:          { color: '#6b7280', marginBottom: '2rem' },
   cards:        { display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem' },
-  card:         { borderRadius: '12px', padding: '1.25rem 1.5rem', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' },
-  cardValue:    { fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem', color: '#fff' },
-  cardLabel:    { fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' },
+  card:         { borderRadius: '10px', padding: '0.55rem 1.25rem', minWidth: '120px', flex: '1 1 120px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '0.75rem' },
+  cardValue:    { fontSize: '1.35rem', fontWeight: 800, color: '#fff', lineHeight: 1 },
+  cardLabel:    { fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', lineHeight: 1 },
   panelRow:     { display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'flex-start' },
   section:      { background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sectionHeader:{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' },
