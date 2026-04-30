@@ -133,11 +133,11 @@ export default function Dashboard() {
       <p style={styles.sub}>Here is a summary of your portfolio landscape.</p>
 
       <div style={styles.cards}>
-        <StatCard label="Portfolios"   value={portfolios?.length ?? '—'} color="#016D2D" loading={pLoad} />
-        <StatCard label="Programs"     value={totalPrograms}            color="#0891b2" loading={pLoad} />
-        <StatCard label="Total Tasks"  value={totalTasks}               color="#059669" loading={tLoad} />
-        <StatCard label="Open Tasks"   value={openTasks}                color="#d97706" loading={tLoad} />
-        <StatCard label="In Progress"  value={inProgress}               color="#014E20" loading={tLoad} />
+        <StatCard label="Portfolios"   value={portfolios?.length ?? '—'} bg="#1e3a8a" loading={pLoad} />
+        <StatCard label="Programs"     value={totalPrograms}             bg="#1d4ed8" loading={pLoad} />
+        <StatCard label="Total Tasks"  value={totalTasks}                bg="#2563eb" loading={tLoad} />
+        <StatCard label="Open Tasks"   value={openTasks}                 bg="#3b82f6" loading={tLoad} />
+        <StatCard label="In Progress"  value={inProgress}                bg="#60a5fa" loading={tLoad} />
       </div>
 
       {/* ── Portfolios ───────────────────────────────────────────────── */}
@@ -495,10 +495,10 @@ function statusStyle(status) {
   return                           { background: '#f3f4f6', color: '#6b7280' };
 }
 
-function StatCard({ label, value, color, loading }) {
+function StatCard({ label, value, bg, loading }) {
   return (
-    <div style={{ ...styles.card, borderTop: `4px solid ${color}` }}>
-      <div style={{ ...styles.cardValue, color }}>{loading ? '...' : value}</div>
+    <div style={{ ...styles.card, background: bg }}>
+      <div style={styles.cardValue}>{loading ? '...' : value}</div>
       <div style={styles.cardLabel}>{label}</div>
     </div>
   );
@@ -508,9 +508,9 @@ const styles = {
   heading:      { fontSize: '1.6rem', fontWeight: 800, color: '#1d1d1d', marginBottom: '0.25rem' },
   sub:          { color: '#6b7280', marginBottom: '2rem' },
   cards:        { display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem' },
-  card:         { background: '#fff', borderRadius: '12px', padding: '1.25rem 1.5rem', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
-  cardValue:    { fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem' },
-  cardLabel:    { color: '#6b7280', fontSize: '0.85rem', fontWeight: 600 },
+  card:         { borderRadius: '12px', padding: '1.25rem 1.5rem', minWidth: '140px', flex: '1 1 140px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' },
+  cardValue:    { fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem', color: '#fff' },
+  cardLabel:    { fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' },
   panelRow:     { display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'flex-start' },
   section:      { background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   sectionHeader:{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' },
