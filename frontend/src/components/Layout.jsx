@@ -149,7 +149,7 @@ const styles = {
   companyName: { marginTop: '0.5rem', fontSize: '0.78rem', fontWeight: 500, color: 'rgba(255,255,255,0.7)', textAlign: 'center', wordBreak: 'break-word' },
   nav:         { flex: 1, padding: '0.75rem 0' },
   navItem:     { display: 'block', padding: '0.6rem 1.25rem', color: '#D3DFD4', textDecoration: 'none', fontSize: '0.9rem', borderRadius: '0', transition: 'background 0.15s' },
-  navActive:   { background: 'rgba(0,255,188,0.15)', color: '#00FFBC', fontWeight: 600 },
+  navActive:   { background: 'rgba(0,255,188,0.15)', color: '#ffffff', fontWeight: 700 },
   navSectionBtn: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '1rem 1.25rem 0.3rem', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' },
   chevron:     { fontSize: '0.85rem', transition: 'transform 0.2s ease', color: 'rgba(255,255,255,0.4)', flexShrink: 0 },
   userArea:    { padding: '1rem 1.25rem', borderTop: '1px solid rgba(255,255,255,0.1)' },
