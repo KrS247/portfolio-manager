@@ -51,15 +51,19 @@ class UserController extends Controller {
             'company_id' => 'nullable|integer|exists:companies,id',
         ]);
 
-        $user = User::create([
-            'username'      => $data['username'],
-            'email'         => $data['email'],
-            'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
-            'role_id'       => $data['role_id']    ?? null,
-            'hourly_rate'   => $data['hourly_rate'] ?? null,
-            'team_id'       => $data['team_id']    ?? null,
-            'company_id'    => $data['company_id'] ?? null,
-        ]);
+        try {
+            $user = User::create([
+                'username'      => $data['username'],
+                'email'         => $data['email'],
+                'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+                'role_id'       => $data['role_id']    ?? null,
+                'hourly_rate'   => $data['hourly_rate'] ?? null,
+                'team_id'       => $data['team_id']    ?? null,
+                'company_id'    => $data['company_id'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to create user: ' . $e->getMessage()], 500);
+        }
 
         return response()->json($user, 201);
     }

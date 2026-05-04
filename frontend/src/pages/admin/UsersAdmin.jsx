@@ -7,7 +7,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 // ── New User Form ──────────────────────────────────────────────────────────────
 function NewUserForm({ roles, teams, companies, onCreated, onClose }) {
-  const [form, setForm] = useState({ username: '', email: '', password: '', role_id: '', hourly_rate: '', team: '', company_id: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', role_id: '', hourly_rate: '', team_id: '', company_id: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,13 +19,17 @@ function NewUserForm({ roles, teams, companies, onCreated, onClose }) {
       const payload = { username: form.username.trim(), email: form.email.trim(), password: form.password };
       if (form.role_id) payload.role_id = parseInt(form.role_id);
       if (form.hourly_rate !== '') payload.hourly_rate = parseFloat(form.hourly_rate);
-      if (form.team.trim()) payload.team = form.team.trim();
+      if (form.team_id) payload.team_id = parseInt(form.team_id);
       if (form.company_id) payload.company_id = parseInt(form.company_id);
       await client.post('/users', payload);
       onCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to create user');
+      const data = err.response?.data;
+      const msg = data?.message
+        || Object.values(data?.errors || {})[0]?.[0]
+        || 'Failed to create user';
+      setError(msg);
     } finally { setSaving(false); }
   };
 
@@ -58,9 +62,9 @@ function NewUserForm({ roles, teams, companies, onCreated, onClose }) {
             onChange={e => setForm(f => ({ ...f, hourly_rate: e.target.value }))} placeholder="e.g. 75.00" />
 
           <label style={styles.label}>Team <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span></label>
-          <select style={styles.input} value={form.team} onChange={e => setForm(f => ({ ...f, team: e.target.value }))}>
+          <select style={styles.input} value={form.team_id} onChange={e => setForm(f => ({ ...f, team_id: e.target.value }))}>
             <option value="">No team</option>
-            {teams?.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+            {teams?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
 
           <label style={styles.label}>Company <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional — restricts page access)</span></label>
@@ -97,7 +101,11 @@ function EditUserForm({ user: editUser, roles, teams, companies, onSaved, onClos
       onSaved();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to save changes');
+      const data = err.response?.data;
+      const msg = data?.message
+        || Object.values(data?.errors || {})[0]?.[0]
+        || 'Failed to save changes';
+      setError(msg);
     } finally { setSaving(false); }
   };
 

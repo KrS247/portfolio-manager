@@ -203,7 +203,12 @@ export default function UserManual({ onClose }) {
               <Warn>Deleting a portfolio will remove all programs, projects, and tasks within it.</Warn>
 
               <SubHeading>Viewing Portfolio Detail</SubHeading>
-              <p style={sc.p}>Click the portfolio name or card to open the detail page, which lists all programs within that portfolio.</p>
+              <p style={sc.p}>Click the portfolio name or card to open the detail page. The detail page includes:</p>
+              <ul style={sc.ul}>
+                <li style={sc.li}>A list of all programs within the portfolio with their status, priority, and progress.</li>
+                <li style={sc.li}>A <strong>List / Gantt</strong> toggle to switch between the programs list and a Gantt chart. The Gantt uses a <strong>monthly</strong> timeline scale.</li>
+                <li style={sc.li}>An <strong>EVM panel</strong> with earned value metrics rolled up across all projects in the portfolio.</li>
+              </ul>
             </Section>
 
             {/* PROGRAMS */}
@@ -223,14 +228,19 @@ export default function UserManual({ onClose }) {
               <p style={sc.p}>Use the Edit or Delete buttons on the program card. Deletion removes all projects and tasks within.</p>
 
               <SubHeading>Program Detail Page</SubHeading>
-              <p style={sc.p}>Click a program name to open its detail page, which shows all projects in the program along with a Gantt chart of those projects.</p>
+              <p style={sc.p}>Click a program name to open its detail page. The detail page includes:</p>
+              <ul style={sc.ul}>
+                <li style={sc.li}>A list of all projects within the program with their status, priority, and progress.</li>
+                <li style={sc.li}>A <strong>List / Gantt</strong> toggle to switch between the projects list and a Gantt chart. The Gantt uses a <strong>monthly</strong> timeline scale.</li>
+                <li style={sc.li}>An <strong>EVM panel</strong> with earned value metrics rolled up across all tasks in the program.</li>
+              </ul>
               <Note>Tasks cannot be added directly from the Program detail page — tasks belong to projects.</Note>
             </Section>
 
             {/* PROJECTS */}
             <Section id="projects" title="Projects">
               <SubHeading>Viewing Projects</SubHeading>
-              <p style={sc.p}>Click <strong>Projects</strong> in the sidebar to see all projects. Click any project name to open its detail page.</p>
+              <p style={sc.p}>Click <strong>Projects</strong> in the sidebar to see all projects. Use the <strong>List / Table</strong> toggle to switch views. In Table view, each row shows the project's parent <strong>Portfolio</strong> and <strong>Program</strong> alongside the project name, status, priority, dates, cost, and completion. Click any project name to open its detail page.</p>
 
               <SubHeading>Creating a Project</SubHeading>
               <Steps items={[
@@ -258,16 +268,19 @@ export default function UserManual({ onClose }) {
             {/* TASKS */}
             <Section id="tasks" title="Tasks">
               <SubHeading>Viewing All Tasks</SubHeading>
-              <p style={sc.p}>Click <strong>Tasks</strong> in the sidebar. Switch between <strong>List</strong> (card) and <strong>Table</strong> views using the toggle. Use the filter buttons (All / Mine / Open / In Progress) to narrow the list. The table view shows sortable <em>Portfolio → Program → Project</em> breadcrumb columns.</p>
+              <p style={sc.p}>Click <strong>Tasks</strong> in the sidebar. Switch between <strong>List</strong> (card) and <strong>Table</strong> views using the toggle. Use the filter buttons (All / Mine / Open / In Progress) to narrow the list. In <strong>Table</strong> view, tasks are displayed with sortable columns including <em>Portfolio</em>, <em>Program</em>, and <em>Project</em> — allowing you to quickly see where each task sits in the hierarchy and sort across the full task list.</p>
+
+              <SubHeading>Task Form</SubHeading>
+              <p style={sc.p}>The task create/edit form opens as a <strong>fixed-size modal</strong> — it stays the same height regardless of which tab is active, so the layout never jumps. Tab content scrolls within the form when it is taller than the visible area. The <strong>Cancel</strong> and <strong>Save Task</strong> buttons are always pinned to the bottom of the modal, visible from every tab.</p>
 
               <SubHeading>Task Form Tabs</SubHeading>
-              <p style={sc.p}>The task create/edit form has five tabs:</p>
+              <p style={sc.p}>The form has five tabs across the top:</p>
               <ul style={sc.ul}>
-                <li style={sc.li}><strong>Task Details</strong> — title, description, priority, status, % complete, dates, milestone flag, parent task, and dependencies.</li>
-                <li style={sc.li}><strong>Risk</strong> — probability, impact, risk name, description, mitigation plan, and risk status (Open / Active / Mitigated / Closed).</li>
-                <li style={sc.li}><strong>Resourcing</strong> — assign team members with estimated and actual hours.</li>
+                <li style={sc.li}><strong>Task Details</strong> — title, description (large text area), priority, status, % complete, dates, milestone flag, parent task, and dependencies.</li>
+                <li style={sc.li}><strong>Risk</strong> — probability, impact, risk name, description, mitigation plan, and risk status (Open / Active / Mitigated / Closed). The tab turns red and shows a badge when a risk exists.</li>
+                <li style={sc.li}><strong>Resourcing</strong> — assign team members with estimated and actual hours. The tab shows a count badge when resources are assigned.</li>
                 <li style={sc.li}><strong>Schedule</strong> — constraint type, constraint date, schedule mode, and read-only CPM results.</li>
-                <li style={sc.li}><strong>Notes</strong> — a large free-text area for meeting notes, decisions, links, or any additional context. A check badge appears on the tab when notes exist.</li>
+                <li style={sc.li}><strong>Notes</strong> — a large free-text area for meeting notes, decisions, links, or any additional context. A check badge appears on the tab when notes have been saved.</li>
               </ul>
 
               <SubHeading>Creating a Task</SubHeading>
@@ -366,8 +379,14 @@ export default function UserManual({ onClose }) {
               <SubHeading>Editing from the Gantt</SubHeading>
               <p style={sc.p}>Click any bar or task name in the Gantt to open the task edit form.</p>
 
-              <SubHeading>Dashboard Gantt</SubHeading>
-              <p style={sc.p}>The Dashboard shows all programs combined into one Gantt chart with a <strong>monthly</strong> timeline scale.</p>
+              <SubHeading>Timeline Scale</SubHeading>
+              <p style={sc.p}>The timeline scale used by each Gantt view depends on the level of the hierarchy:</p>
+              <ul style={sc.ul}>
+                <li style={sc.li}><strong>Dashboard</strong> — monthly scale, showing all programs across all portfolios.</li>
+                <li style={sc.li}><strong>Portfolio detail</strong> — monthly scale, showing all programs within the portfolio.</li>
+                <li style={sc.li}><strong>Program detail</strong> — monthly scale, showing all projects within the program.</li>
+                <li style={sc.li}><strong>Project detail</strong> — auto-scaling to the project's date span, typically weekly for shorter projects.</li>
+              </ul>
             </Section>
 
             {/* SCHEDULING ENGINE */}

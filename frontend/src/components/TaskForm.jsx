@@ -365,7 +365,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
         {error && <div style={styles.error}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
-
+          <div style={styles.tabContent}>
           {/* ════════════════════════════════ TASK TAB ═══════════════ */}
           {activeTab === 'task' && (
             <>
@@ -373,7 +373,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               <input style={styles.input} value={form.title} onChange={e => set('title', e.target.value)} required placeholder="Task title" />
 
               <label style={styles.label}>Description</label>
-              <textarea style={{ ...styles.input, height: '70px', resize: 'vertical' }}
+              <textarea style={{ ...styles.input, height: '140px', resize: 'vertical' }}
                 value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optional description" />
 
               <div style={styles.row}>
@@ -821,6 +821,8 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             </>
           )}
 
+          </div>{/* end tabContent */}
+
           {/* ── Actions ───────────────────────────────────────────── */}
           <div style={styles.actions}>
             <button type="button" onClick={onCancel} style={styles.cancelBtn} disabled={saving}>Cancel</button>
@@ -836,7 +838,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
 
 const styles = {
   overlay:         { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:           { background: '#fff', borderRadius: '12px', padding: '2rem', width: '580px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
+  modal:           { background: '#fff', borderRadius: '12px', padding: '2rem', width: '680px', maxWidth: '95vw', height: '90vh', maxHeight: '780px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
   title:           { fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem', color: '#1d1d1d' },
   breadcrumb:      { display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', marginBottom: '1rem', padding: '0.4rem 0.75rem', background: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' },
   breadcrumbParent:{ color: '#1d4ed8', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -844,11 +846,12 @@ const styles = {
   breadcrumbCurrent:{ color: '#374151', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
 
   tabBar:          { display: 'flex', marginBottom: '1.25rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' },
-  tab:             { flex: 1, padding: '0.55rem 1rem', background: '#f9fafb', border: 'none', borderRight: '1.5px solid #e5e7eb', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
+  tab:             { flex: 1, padding: '0.55rem 0.5rem', background: '#f9fafb', border: 'none', borderRight: '1.5px solid #e5e7eb', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', whiteSpace: 'nowrap' },
   tabActive:       { background: '#016D2D', color: '#fff', borderRight: '1.5px solid #016D2D' },
   tabBadge:        { fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '20px' },
 
-  form:            { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  form:            { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 },
+  tabContent:      { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.25rem' },
   label:           { fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '2px' },
   input:           { width: '100%', padding: '0.5rem 0.75rem', border: '1.5px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' },
   row:             { display: 'flex', gap: '1rem' },
@@ -873,7 +876,7 @@ const styles = {
   resourceFieldLabel: { fontSize: '0.78rem', fontWeight: 600, color: '#6b7280', display: 'block' },
   removeBtn:          { background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.8rem', padding: '2px 6px', borderRadius: '4px', lineHeight: 1 },
 
-  actions:         { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' },
+  actions:         { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1.5px solid #e5e7eb', flexShrink: 0 },
   cancelBtn:       { padding: '0.5rem 1.25rem', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 },
   saveBtn:         { padding: '0.5rem 1.25rem', background: '#016D2D', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 },
   error:           { background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '0.5rem', fontSize: '0.9rem' },
