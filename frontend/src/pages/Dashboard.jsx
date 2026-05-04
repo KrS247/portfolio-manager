@@ -6,6 +6,7 @@ import GanttChart from '../components/GanttChart';
 import EVMPanel from '../components/EVMPanel';
 import { applyStoredOrder, applyStoredProjectOrder } from './admin/DashboardAdmin';
 import client from '../api/client';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const fmt$ = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 const fmtN = (n) => n == null ? '—' : Number(n).toFixed(2);
@@ -146,7 +147,7 @@ export default function Dashboard() {
           <h2 style={{ ...styles.sectionTitle, marginBottom: '1rem' }}>Portfolios</h2>
           <div style={styles.list}>
             {portfolios.slice(0, 5).map(p => (
-              <Link key={p.id} to={`/portfolios/${p.id}`} style={styles.portfolioItem}>
+              <Link key={p.id} to={`/portfolios/${p.id}`} style={styles.portfolioItem} className="portfolio-dash-card">
                 {/* Row 1: name + status */}
                 <div style={styles.portfolioTop}>
                   <span style={styles.listName}>{p.name}</span>
@@ -154,7 +155,6 @@ export default function Dashboard() {
                 </div>
                 {/* Row 2: date range */}
                 <div style={styles.portfolioDate}>
-                  📅&nbsp;
                   {p.task_start_date || p.start_date
                     ? <>{p.task_start_date || p.start_date} → {p.task_end_date || p.end_date || '—'}</>
                     : <span style={{ color: '#d1d5db' }}>No task dates set</span>
@@ -162,9 +162,9 @@ export default function Dashboard() {
                 </div>
                 {/* Row 3: counts */}
                 <div style={styles.portfolioCounts}>
-                  <span style={styles.countChip}>📂 {p.program_count} program{p.program_count !== 1 ? 's' : ''}</span>
-                  <span style={styles.countChip}>📁 {p.project_count ?? 0} project{p.project_count !== 1 ? 's' : ''}</span>
-                  <span style={{ ...styles.countChip, color: '#059669', fontWeight: 700 }}>✅ {p.active_task_count ?? 0} active task{p.active_task_count !== 1 ? 's' : ''}</span>
+                  <span style={styles.countChip}>{p.program_count} program{p.program_count !== 1 ? 's' : ''}</span>
+                  <span style={styles.countChip}>{p.project_count ?? 0} project{p.project_count !== 1 ? 's' : ''}</span>
+                  <span style={{ ...styles.countChip, color: '#059669', fontWeight: 700 }}>{p.active_task_count ?? 0} active task{p.active_task_count !== 1 ? 's' : ''}</span>
                 </div>
                 {/* Row 4: risk, budget & EVM */}
                 {(() => {
@@ -173,12 +173,12 @@ export default function Dashboard() {
                   const totalOverrun = ob.reduce((s, t) => s + (t.cost_overrun ?? 0), 0);
                   const evm = evmByPortfolio[p.id];
                   return (
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid #f0f0f0', marginTop: '0.1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center', paddingTop: '0.5rem', borderTop: '1px solid #f0f0f0', marginTop: '0.1rem' }}>
                       <span style={{ ...styles.countChip, color: hr.length > 0 ? '#dc2626' : '#16a34a', fontWeight: 700, background: hr.length > 0 ? '#fee2e2' : '#f0fdf4', border: `1px solid ${hr.length > 0 ? '#fca5a5' : '#86efac'}` }}>
-                        🔴 {hr.length} high risk
+                        {hr.length} high risk
                       </span>
                       <span style={{ ...styles.countChip, color: ob.length > 0 ? '#b45309' : '#16a34a', fontWeight: 700, background: ob.length > 0 ? '#fef3c7' : '#f0fdf4', border: `1px solid ${ob.length > 0 ? '#fde68a' : '#86efac'}` }}>
-                        💸 {ob.length} over budget{totalOverrun > 0 ? ` · ${fmt$(totalOverrun)}` : ''}
+                        {ob.length} over budget{totalOverrun > 0 ? ` · ${fmt$(totalOverrun)}` : ''}
                       </span>
                       {evm && <>
                         <span style={{ ...styles.countChip, fontWeight: 700 }}>BAC {fmt$(evm.bac)}</span>
@@ -201,12 +201,12 @@ export default function Dashboard() {
       <section style={{ ...styles.section, marginBottom: '1.5rem' }}>
         <button onClick={() => setScheduleOpen(o => !o)} style={styles.scheduleToggle}>
           <div style={styles.sectionTitle}>
-            📅 Schedule View
+            Schedule View
             {!prLoad && programs && (
-              <span style={{ ...styles.badge, background: '#0891b2' }}>{programs.length} programs</span>
+              <span style={{ ...styles.badge, background: '#0891b2', fontSize: '0.9rem', padding: '2px 12px' }}>{programs.length} programs</span>
             )}
           </div>
-          <span style={{ ...styles.chevron, transform: scheduleOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+          <ExpandMoreIcon style={{ ...styles.chevron, transform: scheduleOpen ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 20 }} />
         </button>
 
         {scheduleOpen && (
@@ -234,12 +234,12 @@ export default function Dashboard() {
       <section style={{ ...styles.section, marginBottom: '1.5rem' }}>
         <button onClick={() => setRiskOpen(o => !o)} style={styles.scheduleToggle}>
           <div style={styles.sectionTitle}>
-            ⚠️ Risk Management
+            Risk Management
             {totalAlerts > 0 && (
-              <span style={{ ...styles.badge, background: '#dc2626' }}>{totalAlerts}</span>
+              <span style={{ ...styles.badge, background: '#f87171' }}>{totalAlerts}</span>
             )}
           </div>
-          <span style={{ ...styles.chevron, transform: riskOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+          <ExpandMoreIcon style={{ ...styles.chevron, transform: riskOpen ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 20 }} />
         </button>
 
         {riskOpen && (
@@ -249,9 +249,9 @@ export default function Dashboard() {
       <section style={{ ...styles.section, flex: '1 1 0', minWidth: 0 }}>
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>
-            🔴 High &amp; Critical Risk Tasks
+            High &amp; Critical Risk Tasks
             {!rLoad && highRisk && (
-              <span style={styles.badge}>{highRisk.length}</span>
+              <span style={{ ...styles.badge, background: '#f87171' }}>{highRisk.length}</span>
             )}
           </h2>
           <span style={styles.sectionHint}>Tasks with a risk rating &gt; 10 (High ≥ 11, Critical &gt; 15)</span>
@@ -260,7 +260,7 @@ export default function Dashboard() {
         {rLoad && <div style={styles.loading}>Loading…</div>}
 
         {!rLoad && (!highRisk || highRisk.length === 0) && (
-          <div style={styles.empty}>✅ No tasks exceed the risk threshold of 14.</div>
+          <div style={styles.empty}>No tasks exceed the risk threshold of 14.</div>
         )}
 
         {!rLoad && highRisk && highRisk.length > 0 && (
@@ -269,24 +269,24 @@ export default function Dashboard() {
               const colors = RISK_COLOR[task.risk_status] || RISK_COLOR['High Risk'];
               return (
                 <Link key={task.id} to={taskUrl(task)} style={{ ...styles.riskRow, background: colors.bg, borderLeft: `4px solid ${colors.badge}`, textDecoration: 'none', color: 'inherit', display: 'flex' }}>
-                  {/* Risk rate pill */}
-                  <div style={{ ...styles.riskPill, background: colors.badge }}>
-                    {task.risk_rate}
-                  </div>
-
                   {/* Task info */}
                   <div style={styles.riskInfo}>
                     <div style={styles.riskTitle}>{task.title}</div>
+                    {task.due_date && (
+                      <div style={{ fontSize: '0.75rem', color: colors.text, fontWeight: 600, marginBottom: '0.2rem' }}>
+                        Due {task.due_date}
+                      </div>
+                    )}
                     <div style={styles.riskMeta}>
                       {task.project_id ? (
                         <>
-                          <span style={styles.riskLink}>📁 {task.project_name}</span>
+                          <span style={styles.riskLink}>{task.project_name}</span>
                           {task.program_name && (
-                            <><span style={styles.riskSep}>·</span><span style={{ ...styles.riskLink, color: '#6b7280' }}>📂 {task.program_name}</span></>
+                            <><span style={styles.riskSep}>·</span><span style={{ ...styles.riskLink, color: '#6b7280' }}>{task.program_name}</span></>
                           )}
                         </>
                       ) : task.program_id ? (
-                        <span style={styles.riskLink}>📂 {task.program_name}</span>
+                        <span style={styles.riskLink}>{task.program_name}</span>
                       ) : (
                         <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Portfolio-level task</span>
                       )}
@@ -306,11 +306,11 @@ export default function Dashboard() {
 
       {/* ── Overdue Tasks ────────────────────────────────────────────── */}
       <section style={{ ...styles.section, flex: '1 1 0', minWidth: 0 }}>
-        <div style={styles.sectionHeader}>
+        <div style={{ ...styles.sectionHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '0.15rem' }}>
           <h2 style={styles.sectionTitle}>
-            ⏰ Overdue Tasks
+            Overdue Tasks
             {!oLoad && overdue && overdue.length > 0 && (
-              <span style={{ ...styles.badge, background: '#dc2626' }}>{overdue.length}</span>
+              <span style={{ ...styles.badge, background: '#f87171' }}>{overdue.length}</span>
             )}
           </h2>
           <span style={styles.sectionHint}>Open tasks past their due date</span>
@@ -319,7 +319,7 @@ export default function Dashboard() {
         {oLoad && <div style={styles.loading}>Loading…</div>}
 
         {!oLoad && (!overdue || overdue.length === 0) && (
-          <div style={styles.empty}>✅ No overdue tasks — everything is on track!</div>
+          <div style={styles.empty}>No overdue tasks — everything is on track!</div>
         )}
 
         {!oLoad && overdue && overdue.length > 0 && (
@@ -336,12 +336,6 @@ export default function Dashboard() {
 
               return (
                 <Link key={task.id} to={taskUrl(task)} style={{ ...styles.riskRow, background: urgency.bg, borderLeft: `4px solid ${urgency.border}`, textDecoration: 'none', color: 'inherit', display: 'flex' }}>
-                  {/* Days overdue pill */}
-                  <div style={{ ...styles.overduePill, background: urgency.border }}>
-                    <span style={styles.overdueNum}>{daysOver}</span>
-                    <span style={styles.overdueUnit}>d</span>
-                  </div>
-
                   {/* Task info */}
                   <div style={styles.riskInfo}>
                     <div style={styles.riskTitle}>{task.title}</div>
@@ -354,16 +348,16 @@ export default function Dashboard() {
                       )}
                       {task.project_id ? (
                         <>
-                          <span style={styles.riskLink}>📁 {task.project_name}</span>
+                          <span style={styles.riskLink}>{task.project_name}</span>
                           {task.program_name && (
                             <>
                               <span style={styles.riskSep}>·</span>
-                              <span style={{ ...styles.riskLink, color: '#6b7280' }}>📂 {task.program_name}</span>
+                              <span style={{ ...styles.riskLink, color: '#6b7280' }}>{task.program_name}</span>
                             </>
                           )}
                         </>
                       ) : task.program_id ? (
-                        <span style={styles.riskLink}>📂 {task.program_name}</span>
+                        <span style={styles.riskLink}>{task.program_name}</span>
                       ) : null}
                     </div>
                   </div>
@@ -381,9 +375,9 @@ export default function Dashboard() {
 
       {/* ── Over Budget Tasks ─────────────────────────────────────────── */}
       <section style={{ ...styles.section, flex: '1 1 0', minWidth: 0 }}>
-        <div style={styles.sectionHeader}>
+        <div style={{ ...styles.sectionHeader, flexDirection: 'column', alignItems: 'flex-start', gap: '0.15rem' }}>
           <h2 style={styles.sectionTitle}>
-            💸 Over Budget Tasks
+            Over Budget Tasks
             {!obLoad && overBudget && overBudget.length > 0 && (
               <span style={{ ...styles.badge, background: '#b45309' }}>{overBudget.length}</span>
             )}
@@ -394,7 +388,7 @@ export default function Dashboard() {
         {obLoad && <div style={styles.loading}>Loading…</div>}
 
         {!obLoad && (!overBudget || overBudget.length === 0) && (
-          <div style={styles.empty}>✅ No tasks are over budget — all within estimated hours!</div>
+          <div style={styles.empty}>No tasks are over budget — all within estimated hours!</div>
         )}
 
         {!obLoad && overBudget && overBudget.length > 0 && (
@@ -415,12 +409,6 @@ export default function Dashboard() {
 
               return (
                 <Link key={task.id} to={taskUrl(task)} style={{ ...styles.riskRow, background: urgency.bg, borderLeft: `4px solid ${urgency.border}`, textDecoration: 'none', color: 'inherit', display: 'flex' }}>
-                  {/* Hours-over pill */}
-                  <div style={{ ...styles.overduePill, background: urgency.border, minWidth: '52px' }}>
-                    <span style={styles.overdueNum}>+{hoursOver.toFixed(1)}</span>
-                    <span style={styles.overdueUnit}>h</span>
-                  </div>
-
                   {/* Task info */}
                   <div style={styles.riskInfo}>
                     <div style={styles.riskTitle}>{task.title}</div>
@@ -441,16 +429,16 @@ export default function Dashboard() {
                       )}
                       {task.project_id ? (
                         <>
-                          <span style={styles.riskLink}>📁 {task.project_name}</span>
+                          <span style={styles.riskLink}>{task.project_name}</span>
                           {task.program_name && (
                             <>
                               <span style={styles.riskSep}>·</span>
-                              <span style={{ ...styles.riskLink, color: '#6b7280' }}>📂 {task.program_name}</span>
+                              <span style={{ ...styles.riskLink, color: '#6b7280' }}>{task.program_name}</span>
                             </>
                           )}
                         </>
                       ) : task.program_id ? (
-                        <span style={styles.riskLink}>📂 {task.program_name}</span>
+                        <span style={styles.riskLink}>{task.program_name}</span>
                       ) : null}
                     </div>
                   </div>
@@ -473,11 +461,11 @@ export default function Dashboard() {
       {/* ── EVM: per-portfolio earned value ──────────────────────────── */}
       {portfolios && portfolios.length > 0 && (
         <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>📊 Earned Value — Portfolio Overview</h2>
+          <h2 style={styles.sectionTitle}>Earned Value — Portfolio Overview</h2>
           {portfolios.map(p => (
             <div key={p.id} style={{ marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0A2B14', marginBottom: '0.5rem', paddingLeft: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                📂 {p.name}
+                {p.name}
               </div>
               <EVMPanel parentType="portfolio" parentId={p.id} />
             </div>
@@ -485,6 +473,12 @@ export default function Dashboard() {
         </section>
       )}
 
+      <style>{`
+        .portfolio-dash-card:hover {
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+          background: #f0f9f4 !important;
+        }
+      `}</style>
     </div>
   );
 }
@@ -534,10 +528,10 @@ const styles = {
   list:           { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' },
   listName:       { fontWeight: 700, color: '#1d1d1d', fontSize: '0.95rem' },
   viewAll:        { display: 'inline-block', marginTop: '0.75rem', color: '#016D2D', fontSize: '0.9rem', textDecoration: 'none', fontWeight: 600 },
-  portfolioItem:  { display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.85rem 1rem', background: '#f9fafb', borderRadius: '8px', textDecoration: 'none', color: 'inherit', border: '1px solid #f0f0f0', transition: 'background 0.15s' },
-  portfolioTop:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' },
-  portfolioDate:  { fontSize: '0.8rem', color: '#6b7280' },
-  portfolioCounts:{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.1rem' },
+  portfolioItem:  { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', padding: '0.85rem 1rem', background: '#f9fafb', borderRadius: '8px', textDecoration: 'none', color: 'inherit', border: '1px solid #f0f0f0', transition: 'background 0.15s, box-shadow 0.15s' },
+  portfolioTop:   { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' },
+  portfolioDate:  { fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' },
+  portfolioCounts:{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.1rem' },
   countChip:      { fontSize: '0.75rem', color: '#6b7280', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '999px', padding: '2px 9px', fontWeight: 500 },
   statusPill:       { fontSize: '0.7rem', fontWeight: 700, padding: '2px 9px', borderRadius: '999px', textTransform: 'capitalize', whiteSpace: 'nowrap' },
   scheduleToggle:   { display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' },

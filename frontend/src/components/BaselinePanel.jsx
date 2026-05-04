@@ -12,6 +12,11 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import CloseIcon from '@mui/icons-material/Close';
 
 function Spinner() {
   return (
@@ -134,8 +139,8 @@ export default function BaselinePanel({ parentType, parentId, onBaselineSelected
         onClick={() => setOpen(o => !o)}
         style={styles.header}
       >
-        <span style={styles.headerIcon}>{open ? '▾' : '▸'}</span>
-        <span style={styles.headerTitle}>📐 Schedule Baselines</span>
+        <span style={styles.headerIcon}>{open ? <ExpandMoreIcon style={{ fontSize: 18 }} /> : <ChevronRightIcon style={{ fontSize: 18 }} />}</span>
+        <span style={styles.headerTitle}><StraightenIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }} />Schedule Baselines</span>
         {baselines.length > 0 && !open && (
           <span style={styles.headerBadge}>{baselines.length}</span>
         )}
@@ -165,7 +170,7 @@ export default function BaselinePanel({ parentType, parentId, onBaselineSelected
               disabled={saving || !newName.trim()}
               style={{ ...styles.saveBtn, opacity: newName.trim() ? 1 : 0.45 }}
             >
-              {saving ? <Spinner /> : '📸 Save Baseline'}
+              {saving ? <Spinner /> : <><CameraAltIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Save Baseline</>}
             </button>
           </div>
           {msg && (
@@ -207,7 +212,7 @@ export default function BaselinePanel({ parentType, parentId, onBaselineSelected
                       onClick={() => deleteBaseline(bl.id, bl.name)}
                       style={styles.deleteBtn}
                       title="Delete baseline"
-                    >✕</button>
+                    ><CloseIcon style={{ fontSize: 14 }} /></button>
                   </div>
                 ))}
               </div>

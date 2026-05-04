@@ -10,6 +10,16 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // ── Number formatters ────────────────────────────────────────────────────────
 const fmt$  = (v) => v == null ? '–' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v);
@@ -170,7 +180,11 @@ function IndexGauge({ label, value }) {
         }} />
       </div>
       <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>
-        {value >= 1.0 ? '▲ Favourable' : value >= 0.8 ? '● At Risk' : '▼ Critical'}
+        {value >= 1.0
+          ? <><TrendingUpIcon style={{ fontSize: 12, verticalAlign: 'middle' }} /> Favourable</>
+          : value >= 0.8
+          ? <><FiberManualRecordIcon style={{ fontSize: 12, verticalAlign: 'middle' }} /> At Risk</>
+          : <><TrendingDownIcon style={{ fontSize: 12, verticalAlign: 'middle' }} /> Critical</>}
         &nbsp;· Target: ≥ 1.00
       </div>
     </div>
@@ -204,8 +218,8 @@ export default function EVMPanel({ parentType, parentId }) {
     <div style={styles.panel}>
       {/* ── Panel header ────────────────────────────────────────────── */}
       <button type="button" onClick={() => setOpen(o => !o)} style={styles.header}>
-        <span style={styles.headerIcon}>{open ? '▾' : '▸'}</span>
-        <span style={styles.headerTitle}>📊 Earned Value Management</span>
+        <span style={styles.headerIcon}>{open ? <ExpandMoreIcon style={{ fontSize: 18 }} /> : <ChevronRightIcon style={{ fontSize: 18 }} />}</span>
+        <span style={styles.headerTitle}><BarChartIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }} />Earned Value Management</span>
         {health && (
           <span style={{ ...styles.healthBadge, color: health.color, background: health.bg, borderColor: health.border }}>
             {health.label}
@@ -232,13 +246,17 @@ export default function EVMPanel({ parentType, parentId }) {
             <>
               {/* ── Tab bar ─────────────────────────────────────────── */}
               <div style={styles.tabBar}>
-                {[['summary','📋 Summary'],['curve','📈 S-Curve'],['tasks','📑 Task Detail']].map(([t, lbl]) => (
+                {[
+                ['summary', <><AssignmentIcon style={{ fontSize: 14, verticalAlign: 'middle' }} /> Summary</>],
+                ['curve',   <><TrendingUpIcon style={{ fontSize: 14, verticalAlign: 'middle' }} /> S-Curve</>],
+                ['tasks',   <><ListAltIcon style={{ fontSize: 14, verticalAlign: 'middle' }} /> Task Detail</>],
+              ].map(([t, lbl]) => (
                   <button key={t} type="button" onClick={() => setTab(t)}
                     style={{ ...styles.tabBtn, ...(tab === t ? styles.tabBtnActive : {}) }}>
                     {lbl}
                   </button>
                 ))}
-                <button type="button" onClick={load} style={styles.refreshBtn} title="Refresh EVM">↻</button>
+                <button type="button" onClick={load} style={styles.refreshBtn} title="Refresh EVM"><RefreshIcon style={{ fontSize: 20 }} /></button>
               </div>
 
               {/* ── SUMMARY TAB ─────────────────────────────────────── */}
@@ -246,7 +264,7 @@ export default function EVMPanel({ parentType, parentId }) {
                 <>
                   {s.budgeted_task_count === 0 && (
                     <div style={styles.hint}>
-                      ℹ️ No tasks have resource budgets assigned. Add resources with estimated and actual hours to see EVM metrics.
+                      <InfoOutlinedIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />No tasks have resource budgets assigned. Add resources with estimated and actual hours to see EVM metrics.
                     </div>
                   )}
 
@@ -293,20 +311,27 @@ export default function EVMPanel({ parentType, parentId }) {
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
                     <IndexGauge label="CPI — Cost Performance Index"     value={s.cpi}  />
                     <IndexGauge label="SPI — Schedule Performance Index" value={s.spi}  />
-                    {s.tcpi != null && (
-                      <div style={{ flex: '1 1 140px', minWidth: 120 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>TCPI</span>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: s.tcpi > 1.1 ? '#dc2626' : '#16a34a' }}>
-                            {fmtN(s.tcpi)}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: '#9ca3af' }}>
-                          To-Complete Performance Index — efficiency needed to meet BAC
-                          {s.tcpi > 1.1 ? ' ⚠️ Difficult' : ' ✓ Achievable'}
-                        </div>
+                    <div style={{ flex: '1 1 140px', minWidth: 120 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6b7280' }}>TCPI</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: s.tcpi == null ? '#9ca3af' : s.tcpi > 1.1 ? '#dc2626' : '#16a34a' }}>
+                          {s.tcpi == null ? '–' : fmtN(s.tcpi)}
+                        </span>
                       </div>
-                    )}
+                      <div style={{ height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: s.tcpi == null ? '100%' : `${Math.min(100, Math.max(0, (s.tcpi / 1.5) * 100))}%`,
+                          background: s.tcpi == null ? '#d1d5db' : s.tcpi > 1.1 ? '#dc2626' : '#16a34a',
+                          borderRadius: 4,
+                          transition: 'width 0.5s ease',
+                        }} />
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>
+                        To-Complete Performance Index — efficiency needed to meet BAC
+                        {s.tcpi == null ? ' · No data yet' : s.tcpi > 1.1 ? ' · Difficult' : ' · Achievable'}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Stats row */}

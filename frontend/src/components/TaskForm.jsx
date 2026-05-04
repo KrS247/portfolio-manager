@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import client from '../api/client';
 import PrioritySelect from './PrioritySelect';
 import ProgressBar from './ProgressBar';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import GroupIcon from '@mui/icons-material/Group';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import NoteAltIcon from '@mui/icons-material/NoteAlt';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import FlagIcon from '@mui/icons-material/Flag';
 
 // ── Risk helpers ──────────────────────────────────────────────────────────────
 function getRiskMeta(rate) {
@@ -308,14 +317,14 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             style={{ ...styles.tab, ...(activeTab === 'task' ? styles.tabActive : {}) }}
             onClick={() => setActiveTab('task')}
           >
-            📋 Task Details
+            <AssignmentIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Task Details
           </button>
           <button
             type="button"
             style={{ ...styles.tab, ...(activeTab === 'risk' ? styles.tabActive : {}), ...(existingRisk || riskForm.name ? { color: activeTab === 'risk' ? '#fff' : '#dc2626' } : {}) }}
             onClick={() => setActiveTab('risk')}
           >
-            ⚠️ Risk
+            <WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Risk
             {existingRisk && (
               <span style={{ ...styles.tabBadge, background: activeTab === 'risk' ? 'rgba(255,255,255,0.25)' : getRiskMeta(existingRisk.risk_rate).bg, color: activeTab === 'risk' ? '#fff' : getRiskMeta(existingRisk.risk_rate).color }}>
                 {existingRisk.risk_status}
@@ -327,7 +336,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             style={{ ...styles.tab, ...(activeTab === 'resourcing' ? styles.tabActive : {}) }}
             onClick={() => setActiveTab('resourcing')}
           >
-            👥 Resourcing
+            <GroupIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Resourcing
             {resources.length > 0 && (
               <span style={{ ...styles.tabBadge, background: activeTab === 'resourcing' ? 'rgba(255,255,255,0.25)' : '#d1fae5', color: activeTab === 'resourcing' ? '#fff' : '#016D2D' }}>
                 {resources.length}
@@ -339,16 +348,16 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             style={{ ...styles.tab, ...(activeTab === 'schedule' ? styles.tabActive : {}) }}
             onClick={() => setActiveTab('schedule')}
           >
-            📅 Schedule
+            <CalendarTodayIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Schedule
           </button>
           <button
             type="button"
             style={{ ...styles.tab, ...(activeTab === 'notes' ? styles.tabActive : {}), borderRight: 'none' }}
             onClick={() => setActiveTab('notes')}
           >
-            📝 Notes
+            <NoteAltIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Notes
             {form.notes?.trim() && (
-              <span style={{ ...styles.tabBadge, background: activeTab === 'notes' ? 'rgba(255,255,255,0.25)' : '#e0f2fe', color: activeTab === 'notes' ? '#fff' : '#0369a1' }}>✓</span>
+              <span style={{ ...styles.tabBadge, background: activeTab === 'notes' ? 'rgba(255,255,255,0.25)' : '#e0f2fe', color: activeTab === 'notes' ? '#fff' : '#0369a1' }}><CheckIcon style={{ fontSize: 11 }} /></span>
             )}
           </button>
         </div>
@@ -405,8 +414,8 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                   onChange={e => set('is_milestone', e.target.checked ? 1 : 0)}
                   style={{ accentColor: '#d97706', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
                 />
-                <span style={{ fontWeight: 700, color: form.is_milestone ? '#d97706' : '#374151', fontSize: '0.9rem' }}>
-                  ⭐ Milestone
+                <span style={{ fontWeight: 700, color: form.is_milestone ? '#d97706' : '#374151', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <StarBorderIcon style={{ fontSize: 16, color: '#d97706' }} />Milestone
                 </span>
                 {form.is_milestone && (
                   <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
@@ -418,7 +427,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               {/* Parent date range hint for subtasks */}
               {currentParentTask && (currentParentTask.start_date || currentParentTask.due_date) && (
                 <div style={styles.parentDateHint}>
-                  <span>📅 Parent task date range:</span>
+                  <span><CalendarTodayIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />Parent task date range:</span>
                   <strong>{currentParentTask.start_date || '–'}</strong>
                   <span>→</span>
                   <strong>{currentParentTask.due_date || '–'}</strong>
@@ -507,7 +516,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                             <button type="button"
                               onClick={() => setDeps(prev => prev.filter((_, i) => i !== idx))}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '0.85rem', padding: '0 4px' }}
-                            >✕</button>
+                            ><CloseIcon style={{ fontSize: 14 }} /></button>
                           </div>
                         );
                       })}
@@ -691,7 +700,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                           style={styles.removeBtn}
                           title="Remove"
                         >
-                          ✕
+                          <CloseIcon style={{ fontSize: 14 }} />
                         </button>
                       </div>
                       {/* Hours inputs */}
@@ -788,7 +797,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                     </div>
                     {cpmFields.float_days === 0 && (
                       <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#dc2626', fontWeight: 600 }}>
-                        ⚑ This task is on the Critical Path — zero float.
+                        <FlagIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />This task is on the Critical Path — zero float.
                       </div>
                     )}
                   </div>

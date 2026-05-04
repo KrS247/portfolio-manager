@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import client from '../../api/client';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -122,7 +125,10 @@ export default function ResourceReport({ parentType, parentId }) {
                   onClick={() => r.tasks?.length > 0 && toggle(r.user_id || i)}
                 >
                   <td style={{ padding: '0.55rem 0.75rem', fontWeight: 600, borderBottom: '1px solid #f3f4f6' }}>
-                    {r.tasks?.length > 0 && <span style={{ marginRight: '0.4rem', fontSize: '0.7rem', color: '#9ca3af' }}>{expanded[r.user_id || i] ? '▼' : '▶'}</span>}
+                    {r.tasks?.length > 0 && (expanded[r.user_id || i]
+                      ? <ExpandMoreIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: '0.3rem', color: '#9ca3af' }} />
+                      : <ChevronRightIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: '0.3rem', color: '#9ca3af' }} />
+                    )}
                     {r.user_name}
                   </td>
                   <td style={{ padding: '0.55rem 0.75rem', borderBottom: '1px solid #f3f4f6', color: '#6b7280' }}>{r.hourly_rate > 0 ? `$${r.hourly_rate}/hr` : '—'}</td>
@@ -149,7 +155,7 @@ export default function ResourceReport({ parentType, parentId }) {
                 </tr>
                 {expanded[r.user_id || i] && r.tasks?.map(t => (
                   <tr key={t.task_id} style={{ background: '#f9fafb' }}>
-                    <td style={{ padding: '0.4rem 0.75rem 0.4rem 2rem', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: '0.78rem' }}>↳ {t.task_title}</td>
+                    <td style={{ padding: '0.4rem 0.75rem 0.4rem 2rem', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: '0.78rem' }}><SubdirectoryArrowRightIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{t.task_title}</td>
                     <td style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid #f3f4f6' }} />
                     <td style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: '0.78rem' }}>{t.estimated_hours}h</td>
                     <td style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid #f3f4f6', color: t.actual_hours > t.estimated_hours ? '#dc2626' : '#6b7280', fontSize: '0.78rem' }}>{t.actual_hours}h</td>

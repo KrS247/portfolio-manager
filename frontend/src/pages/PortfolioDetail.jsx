@@ -100,8 +100,8 @@ export default function PortfolioDetail() {
           {data.description && <p style={styles.desc}>{data.description}</p>}
           <div style={styles.metaRow}>
             {data.priority != null && <PriorityTag priority={data.priority} />}
-            {data.start_date && <span style={styles.datePill}>📅 Start: {data.start_date}</span>}
-            {data.end_date   && <span style={styles.datePill}>🏁 End: {data.end_date}</span>}
+            {data.start_date && <span style={styles.datePill}>Start: {data.start_date}</span>}
+            {data.end_date   && <span style={styles.datePill}>End: {data.end_date}</span>}
           </div>
           {/* Portfolio-level completion bar */}
           <div style={styles.progressWrap}>
@@ -110,7 +110,7 @@ export default function PortfolioDetail() {
           {getRiskMeta(data.avg_risk_rate) && (() => { const rm = getRiskMeta(data.avg_risk_rate); return (
             <div style={{ marginTop: '0.5rem' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 700 }}>
-                ⚠️ Avg Risk: {data.avg_risk_rate} · {rm.label}
+                Avg Risk: {data.avg_risk_rate} · {rm.label}
               </span>
             </div>
           ); })()}
@@ -123,8 +123,8 @@ export default function PortfolioDetail() {
           <h2 style={styles.sectionTitle}>Programs ({data.programs?.length || 0})</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={styles.viewToggle}>
-              <button style={{ ...styles.viewBtn, ...(progView === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setProgView('list')}>☰ List</button>
-              <button style={{ ...styles.viewBtn, ...(progView === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setProgView('gantt')}>📊 Gantt</button>
+              <button style={{ ...styles.viewBtn, ...(progView === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setProgView('list')}>List</button>
+              <button style={{ ...styles.viewBtn, ...(progView === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setProgView('gantt')}>Gantt</button>
             </div>
             {canEdit('programs') && <button style={styles.addBtn} onClick={() => setShowProgForm(true)}>+ Add Program</button>}
           </div>
@@ -138,6 +138,7 @@ export default function PortfolioDetail() {
             items={data.programs}
             nameField="name"
             endDateField="end_date"
+            timeUnit="month"
             canEdit={canEdit('programs')}
             onEdit={(prog) => setEditProg(prog)}
           />
@@ -146,7 +147,7 @@ export default function PortfolioDetail() {
         {/* List (card grid) view */}
         <div style={{ ...styles.grid, display: progView === 'list' ? 'grid' : 'none' }}>
           {data.programs?.map(prog => (
-            <div key={prog.id} style={styles.card}>
+            <div key={prog.id} className="pm-card" style={styles.card}>
               <div style={styles.cardHeader}>
                 <Link to={`/programs/${prog.id}`} style={styles.cardTitle}>{prog.name}</Link>
                 <StatusBadge status={prog.status} />
@@ -154,8 +155,8 @@ export default function PortfolioDetail() {
               {prog.description && <p style={styles.cardDesc}>{prog.description}</p>}
               <div style={styles.cardTags}><PriorityTag priority={prog.priority ?? 5} /></div>
               <div style={styles.cardDates}>
-                {prog.start_date && <span>📅 {prog.start_date}</span>}
-                {prog.end_date   && <span>🏁 {prog.end_date}</span>}
+                {prog.start_date && <span>{prog.start_date}</span>}
+                {prog.end_date   && <span>{prog.end_date}</span>}
               </div>
               <div style={styles.cardMeta}><span>{prog.project_count} projects</span>{prog.owner_name && <span>Owner: {prog.owner_name}</span>}</div>
               {/* Per-program completion bar */}
@@ -167,7 +168,7 @@ export default function PortfolioDetail() {
               </div>
               {getRiskMeta(prog.avg_risk_rate) && (() => { const rm = getRiskMeta(prog.avg_risk_rate); return (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: '20px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, marginTop: '4px' }}>
-                  ⚠️ {prog.avg_risk_rate} · {rm.label}
+                  {prog.avg_risk_rate} · {rm.label}
                 </span>
               ); })()}
               {canEdit('programs') && (

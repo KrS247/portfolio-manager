@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../../api/client';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 const STATUS_COLOR = { open: '#6b7280', in_progress: '#2563eb', completed: '#16a34a', cancelled: '#9ca3af' };
@@ -147,7 +148,7 @@ export default function TaskStatusReport({ parentType, parentId }) {
                 return (
                   <tr key={t.task_id} style={{ background: overdue ? '#fff5f5' : STATUS_BG[t.status] || '#fff' }}>
                     <td style={{ padding: '0.5rem 0.6rem', fontWeight: 600, borderBottom: '1px solid #f3f4f6', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {overdue && <span style={{ color: '#dc2626', marginRight: '4px' }}>⚠</span>}
+                      {overdue && <WarningAmberIcon style={{ fontSize: 13, color: '#dc2626', marginRight: '4px', verticalAlign: 'middle' }} />}
                       {t.task_title}
                     </td>
                     <td style={{ padding: '0.5rem 0.6rem', borderBottom: '1px solid #f3f4f6' }}>

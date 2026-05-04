@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller {
     public function index(Request $request) {
-        $query = Project::with('owner');
+        $query = Project::with('owner', 'program.portfolio');
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
         }
@@ -53,6 +53,9 @@ class ProjectController extends Controller {
                 'estimated_cost' => round($estimated_cost, 2),
                 'actual_cost' => round($actual_cost, 2),
                 'owner_name' => $proj->owner?->username,
+                'program_name' => $proj->program?->name,
+                'portfolio_id' => $proj->program?->portfolio_id,
+                'portfolio_name' => $proj->program?->portfolio?->name,
             ]);
         });
 
@@ -78,9 +81,14 @@ class ProjectController extends Controller {
         }
         $tasks = $taskQuery->get();
 
+        $percent_complete = Task::where('parent_type', 'project')
+            ->where('parent_id', $id)
+            ->avg('percent_complete') ?? 0;
+
         return response()->json(array_merge($project->toArray(), [
             'tasks' => $tasks,
             'owner_name' => $project->owner?->username,
+            'percent_complete' => round($percent_complete, 1),
         ]));
     }
 

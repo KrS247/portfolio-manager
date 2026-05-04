@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApi } from '../../hooks/useApi';
+import CheckIcon from '@mui/icons-material/Check';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import FolderIcon from '@mui/icons-material/Folder';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 // ── localStorage keys ────────────────────────────────────────────────────────
 export const LS_KEY         = 'pm_dashboard_program_order';
@@ -146,7 +151,7 @@ export default function DashboardAdmin() {
           </p>
         </div>
         <div style={styles.headerRight}>
-          {saved && <span style={styles.savedBadge}>✓ Saved</span>}
+          {saved && <span style={styles.savedBadge}><CheckIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 2 }} />Saved</span>}
           <button onClick={resetAll} style={styles.resetBtn} disabled={loading}>
             Reset All to Default
           </button>
@@ -157,7 +162,7 @@ export default function DashboardAdmin() {
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <h2 style={styles.cardTitle}>
-            📅 Program Order — Schedule View
+            <CalendarTodayIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 5 }} />Program Order — Schedule View
             {!prLoad && programs && (
               <span style={styles.countBadge}>{programs.length} programs</span>
             )}
@@ -187,8 +192,8 @@ export default function DashboardAdmin() {
                   {prog.status.replace('_', ' ')}
                 </span>
                 <div style={styles.btns}>
-                  <button style={{ ...styles.btn, opacity: idx === 0 ? 0.3 : 1 }} disabled={idx === 0} onClick={() => moveProgram(idx, -1)} title="Move up">▲</button>
-                  <button style={{ ...styles.btn, opacity: idx === orderedPrograms.length - 1 ? 0.3 : 1 }} disabled={idx === orderedPrograms.length - 1} onClick={() => moveProgram(idx, 1)} title="Move down">▼</button>
+                  <button style={{ ...styles.btn, opacity: idx === 0 ? 0.3 : 1 }} disabled={idx === 0} onClick={() => moveProgram(idx, -1)} title="Move up"><ArrowUpwardIcon style={{ fontSize: 14 }} /></button>
+                  <button style={{ ...styles.btn, opacity: idx === orderedPrograms.length - 1 ? 0.3 : 1 }} disabled={idx === orderedPrograms.length - 1} onClick={() => moveProgram(idx, 1)} title="Move down"><ArrowDownwardIcon style={{ fontSize: 14 }} /></button>
                 </div>
               </div>
             ))}
@@ -200,7 +205,7 @@ export default function DashboardAdmin() {
       <div style={{ ...styles.card, marginTop: '1.5rem' }}>
         <div style={styles.cardHeader}>
           <h2 style={styles.cardTitle}>
-            📁 Project Order — per Program
+            <FolderIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 5 }} />Project Order — per Program
             {!pjLoad && projects && (
               <span style={{ ...styles.countBadge, background: '#d1fae5', color: '#016D2D' }}>{projects.length} projects</span>
             )}
@@ -245,8 +250,8 @@ export default function DashboardAdmin() {
                         {proj.status.replace('_', ' ')}
                       </span>
                       <div style={styles.btns}>
-                        <button style={{ ...styles.btn, opacity: jIdx === 0 ? 0.3 : 1 }} disabled={jIdx === 0} onClick={() => moveProject(prog.id, jIdx, -1)} title="Move up">▲</button>
-                        <button style={{ ...styles.btn, opacity: jIdx === progProjects.length - 1 ? 0.3 : 1 }} disabled={jIdx === progProjects.length - 1} onClick={() => moveProject(prog.id, jIdx, 1)} title="Move down">▼</button>
+                        <button style={{ ...styles.btn, opacity: jIdx === 0 ? 0.3 : 1 }} disabled={jIdx === 0} onClick={() => moveProject(prog.id, jIdx, -1)} title="Move up"><ArrowUpwardIcon style={{ fontSize: 14 }} /></button>
+                        <button style={{ ...styles.btn, opacity: jIdx === progProjects.length - 1 ? 0.3 : 1 }} disabled={jIdx === progProjects.length - 1} onClick={() => moveProject(prog.id, jIdx, 1)} title="Move down"><ArrowDownwardIcon style={{ fontSize: 14 }} /></button>
                       </div>
                     </div>
                   ))}

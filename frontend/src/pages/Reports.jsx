@@ -1,5 +1,17 @@
 import { useState } from 'react';
 import { useApi } from '../hooks/useApi';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import GroupIcon from '@mui/icons-material/Group';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import PrintIcon from '@mui/icons-material/Print';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import DescriptionIcon from '@mui/icons-material/Description';
 import PortfolioStatusReport from '../components/reports/PortfolioStatusReport';
 import ProgramReport from '../components/reports/ProgramReport';
 import ProjectReport from '../components/reports/ProjectReport';
@@ -11,15 +23,15 @@ import OverBudgetReport from '../components/reports/OverBudgetReport';
 import TaskStatusReport from '../components/reports/TaskStatusReport';
 
 const REPORT_TYPES = [
-  { id: 'portfolio-status',  label: 'Portfolio Status',     scope: 'portfolio', icon: '📊', desc: 'Executive summary of a portfolio' },
-  { id: 'program',           label: 'Program Report',       scope: 'program',   icon: '📋', desc: 'Program health, projects & tasks' },
-  { id: 'project',           label: 'Project Report',       scope: 'project',   icon: '🗂️', desc: 'Project detail, tasks & EVM' },
-  { id: 'evm',               label: 'EVM Performance',      scope: 'any',       icon: '📈', desc: 'Earned value metrics & S-curve' },
-  { id: 'schedule-variance', label: 'Schedule Variance',    scope: 'any',       icon: '📅', desc: 'Baseline vs actuals comparison' },
-  { id: 'resource',          label: 'Resource Utilisation', scope: 'any',       icon: '👥', desc: 'Per-user hours & cost breakdown' },
-  { id: 'risk-register',     label: 'Risk Register',        scope: 'any',       icon: '⚠️', desc: 'Risks ranked by severity' },
-  { id: 'over-budget',       label: 'Over-Budget',          scope: 'any',       icon: '💰', desc: 'Tasks exceeding budget' },
-  { id: 'task-status',       label: 'Task Status',          scope: 'any',       icon: '✅', desc: 'Full task list with status' },
+  { id: 'portfolio-status',  label: 'Portfolio Status',     scope: 'portfolio', Icon: BarChartIcon,     desc: 'Executive summary of a portfolio' },
+  { id: 'program',           label: 'Program Report',       scope: 'program',   Icon: AssignmentIcon,   desc: 'Program health, projects & tasks' },
+  { id: 'project',           label: 'Project Report',       scope: 'project',   Icon: FolderSpecialIcon,desc: 'Project detail, tasks & EVM' },
+  { id: 'evm',               label: 'EVM Performance',      scope: 'any',       Icon: TrendingUpIcon,   desc: 'Earned value metrics & S-curve' },
+  { id: 'schedule-variance', label: 'Schedule Variance',    scope: 'any',       Icon: CalendarTodayIcon,desc: 'Baseline vs actuals comparison' },
+  { id: 'resource',          label: 'Resource Utilisation', scope: 'any',       Icon: GroupIcon,        desc: 'Per-user hours & cost breakdown' },
+  { id: 'risk-register',     label: 'Risk Register',        scope: 'any',       Icon: WarningAmberIcon, desc: 'Risks ranked by severity' },
+  { id: 'over-budget',       label: 'Over-Budget',          scope: 'any',       Icon: AttachMoneyIcon,  desc: 'Tasks exceeding budget' },
+  { id: 'task-status',       label: 'Task Status',          scope: 'any',       Icon: TaskAltIcon,      desc: 'Full task list with status' },
 ];
 
 const PRINT_CSS = `
@@ -99,9 +111,9 @@ export default function Reports() {
       {/* ── Controls (hidden on print) ── */}
       <div className="no-print" style={s.controls}>
         <div style={s.header}>
-          <h1 style={s.title}>📊 Reports</h1>
+          <h1 style={s.title}><BarChartIcon style={{ fontSize: 24, verticalAlign: 'middle', marginRight: 6 }} />Reports</h1>
           {generated && scopeId && (
-            <button onClick={() => window.print()} style={s.printBtn}>🖨 Print / Export PDF</button>
+            <button onClick={() => window.print()} style={s.printBtn}><PrintIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }} />Print / Export PDF</button>
           )}
         </div>
 
@@ -114,7 +126,7 @@ export default function Reports() {
               style={{ ...s.typeCard, ...(reportType === r.id ? s.typeActive : {}) }}
               title={r.desc}
             >
-              <span style={s.typeIcon}>{r.icon}</span>
+              <r.Icon style={{ fontSize: '1.5rem', color: reportType === r.id ? '#016D2D' : '#6b7280' }} />
               <span style={s.typeLabel}>{r.label}</span>
             </button>
           ))}
@@ -146,7 +158,7 @@ export default function Reports() {
             disabled={!scopeId}
             style={{ ...s.genBtn, ...(!scopeId ? s.genDisabled : {}) }}
           >
-            ▶ Generate Report
+            <PlayArrowIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 3 }} />Generate Report
           </button>
         </div>
       </div>
@@ -156,7 +168,7 @@ export default function Reports() {
         ? <div style={s.output}>{renderReport()}</div>
         : (
           <div className="no-print" style={s.placeholder}>
-            <div style={{ fontSize: '3rem', opacity: 0.3 }}>📄</div>
+            <DescriptionIcon style={{ fontSize: '3rem', opacity: 0.3, color: '#9ca3af' }} />
             <div style={{ fontSize: '1rem', fontWeight: 500, color: '#9ca3af' }}>
               Select a report type and scope, then click Generate Report
             </div>

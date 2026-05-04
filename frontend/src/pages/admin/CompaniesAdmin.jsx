@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import client from '../../api/client';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import CloseIcon from '@mui/icons-material/Close';
 
 // ── New Company Form ───────────────────────────────────────────────────────────
 function NewCompanyForm({ onCreated, onClose }) {
@@ -139,7 +140,7 @@ function PermissionsPanel({ company, onClose }) {
             <h3 style={{ ...styles.modalTitle, marginBottom: '0.25rem' }}>Page Access</h3>
             <div style={{ fontSize: '0.9rem', color: '#016D2D', fontWeight: 600 }}>{company.name}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}><CloseIcon style={{ fontSize: '1.4rem' }} /></button>
         </div>
 
         <p style={{ fontSize: '0.84rem', color: '#6b7280', marginBottom: '1rem', lineHeight: 1.5 }}>

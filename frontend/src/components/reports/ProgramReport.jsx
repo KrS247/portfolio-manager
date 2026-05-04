@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import client from '../../api/client';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtN = (n, dp = 2) => n == null ? '—' : Number(n).toFixed(dp);
@@ -163,8 +165,8 @@ export default function ProgramReport({ parentType, parentId }) {
       {risks.length > 0 && (
         <Section title={`Risk Summary (${risks.length} risks)`}>
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            {criticalRisks > 0 && <div style={{ padding: '0.5rem 1rem', background: '#fee2e2', borderRadius: '8px', color: '#dc2626', fontWeight: 700, fontSize: '0.85rem' }}>🔴 {criticalRisks} Critical</div>}
-            {highRisks > 0 && <div style={{ padding: '0.5rem 1rem', background: '#fef3c7', borderRadius: '8px', color: '#d97706', fontWeight: 700, fontSize: '0.85rem' }}>🟠 {highRisks} High</div>}
+            {criticalRisks > 0 && <div style={{ padding: '0.5rem 1rem', background: '#fee2e2', borderRadius: '8px', color: '#dc2626', fontWeight: 700, fontSize: '0.85rem' }}><ErrorIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />{criticalRisks} Critical</div>}
+            {highRisks > 0 && <div style={{ padding: '0.5rem 1rem', background: '#fef3c7', borderRadius: '8px', color: '#d97706', fontWeight: 700, fontSize: '0.85rem' }}><WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />{highRisks} High</div>}
             <div style={{ padding: '0.5rem 1rem', background: '#f3f4f6', borderRadius: '8px', color: '#6b7280', fontWeight: 700, fontSize: '0.85rem' }}>Total: {risks.length}</div>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>

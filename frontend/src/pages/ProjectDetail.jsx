@@ -7,6 +7,19 @@ import StatusBadge from '../components/StatusBadge';
 import TaskList from '../components/TaskList';
 import ProgressBar from '../components/ProgressBar';
 import EVMPanel from '../components/EVMPanel';
+import SearchIcon from '@mui/icons-material/Search';
+import LinkIcon from '@mui/icons-material/Link';
+import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
+import SummarizeIcon from '@mui/icons-material/Summarize';
+import PersonIcon from '@mui/icons-material/Person';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import CommentIcon from '@mui/icons-material/Comment';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import ErrorIcon from '@mui/icons-material/Error';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // ─── Risk helpers ────────────────────────────────────────────────────────────
 function getRiskMeta(rate) {
@@ -68,10 +81,10 @@ function highlightRiskWords(text) {
 }
 
 const PRIORITY_META = {
-  1: { label: 'Urgent', color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
-  2: { label: 'High',   color: '#ea580c', bg: '#ffedd5', icon: '🟠' },
-  3: { label: 'Normal', color: '#d97706', bg: '#fef3c7', icon: '🟡' },
-  4: { label: 'Low',    color: '#16a34a', bg: '#dcfce7', icon: '🟢' },
+  1: { label: 'Urgent', color: '#dc2626', bg: '#fee2e2', Icon: ErrorIcon },
+  2: { label: 'High',   color: '#ea580c', bg: '#ffedd5', Icon: WarningAmberIcon },
+  3: { label: 'Normal', color: '#d97706', bg: '#fef3c7', Icon: InfoOutlinedIcon },
+  4: { label: 'Low',    color: '#16a34a', bg: '#dcfce7', Icon: CheckCircleOutlineIcon },
 };
 
 // ─── Insights Modal ──────────────────────────────────────────────────────────
@@ -100,13 +113,13 @@ function InsightsModal({ clickupId, projectName, onClose }) {
         {/* Header */}
         <div style={ms.modalHeader}>
           <div>
-            <div style={ms.modalTitle}>🔍 Detailed Insights</div>
+            <div style={ms.modalTitle}><SearchIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 5 }} />Detailed Insights</div>
             <div style={ms.modalSub}>
               {projectName}
-              <span style={ms.idPill}>🔗 {clickupId}</span>
+              <span style={ms.idPill}><LinkIcon style={{ fontSize: 12, verticalAlign: 'middle', marginRight: 3 }} />{clickupId}</span>
             </div>
           </div>
-          <button style={ms.closeBtn} onClick={onClose}>✕</button>
+          <button style={ms.closeBtn} onClick={onClose}><CloseIcon style={{ fontSize: 18 }} /></button>
         </div>
 
         {/* Loading */}
@@ -120,7 +133,7 @@ function InsightsModal({ clickupId, projectName, onClose }) {
         {/* Error */}
         {phase === 'error' && (
           <div style={ms.errorBox}>
-            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⚠️</div>
+            <div style={{ marginBottom: '0.5rem' }}><WarningAmberIcon style={{ fontSize: '1.5rem', color: '#dc2626' }} /></div>
             <p style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Unable to load ClickUp data</p>
             <p style={{ fontSize: '0.85rem', color: '#991b1b' }}>{errMsg}</p>
             {(errMsg.includes('CLICKUP_MCP_TOKEN') || errMsg.includes('NOT_CONFIGURED')) && (
@@ -199,9 +212,9 @@ function buildCommentSummary(comments) {
   const progressed = PROGRESS_WORDS.filter((w) => allText.includes(w));
 
   if (risks.length > 0) {
-    summary += ` ⚠️ Risk signals detected in comments (${risks.slice(0, 3).join(', ')}).`;
+    summary += ` [Risk signals detected in comments: ${risks.slice(0, 3).join(', ')}.]`;
   } else if (progressed.length > 0) {
-    summary += ` ✅ Progress indicators noted (${progressed.slice(0, 3).join(', ')}).`;
+    summary += ` [Progress indicators noted: ${progressed.slice(0, 3).join(', ')}.]`;
   }
 
   return summary;
@@ -231,13 +244,13 @@ function InsightsBody({ task, comments }) {
 
   // ── Risk flags ───────────────────────────────────────────────────────────
   const riskFlags = [];
-  if (dueInfo?.overdue)                 riskFlags.push({ icon: '🔴', text: `Task is ${dueInfo.label}`, sev: 'high' });
-  if ([1, 2].includes(task.priority?.priority)) riskFlags.push({ icon: '🟠', text: `${priorityMeta.label} priority task`, sev: 'med' });
-  if (riskMatches.length > 0)           riskFlags.push({ icon: '🔴', text: `${riskMatches.length} risk keyword${riskMatches.length > 1 ? 's' : ''} found in recent comments (${riskMatches.slice(0, 3).join(', ')})`, sev: 'high' });
-  if (!task.assignees?.length)          riskFlags.push({ icon: '🟡', text: 'Task has no assignee', sev: 'med' });
-  if (!task.due_date)                   riskFlags.push({ icon: '🟡', text: 'No due date set', sev: 'low' });
-  if (dueInfo && !dueInfo.overdue && dueInfo.days <= 7) riskFlags.push({ icon: '🟠', text: `Due very soon — ${dueInfo.label}`, sev: 'med' });
-  if (riskFlags.length === 0)           riskFlags.push({ icon: '✅', text: 'No significant risks detected', sev: 'ok' });
+  if (dueInfo?.overdue)                 riskFlags.push({ icon: <ErrorIcon style={{ fontSize: 16 }} />, text: `Task is ${dueInfo.label}`, sev: 'high' });
+  if ([1, 2].includes(task.priority?.priority)) riskFlags.push({ icon: <WarningAmberIcon style={{ fontSize: 16 }} />, text: `${priorityMeta.label} priority task`, sev: 'med' });
+  if (riskMatches.length > 0)           riskFlags.push({ icon: <ErrorIcon style={{ fontSize: 16 }} />, text: `${riskMatches.length} risk keyword${riskMatches.length > 1 ? 's' : ''} found in recent comments (${riskMatches.slice(0, 3).join(', ')})`, sev: 'high' });
+  if (!task.assignees?.length)          riskFlags.push({ icon: <InfoOutlinedIcon style={{ fontSize: 16 }} />, text: 'Task has no assignee', sev: 'med' });
+  if (!task.due_date)                   riskFlags.push({ icon: <InfoOutlinedIcon style={{ fontSize: 16 }} />, text: 'No due date set', sev: 'low' });
+  if (dueInfo && !dueInfo.overdue && dueInfo.days <= 7) riskFlags.push({ icon: <WarningAmberIcon style={{ fontSize: 16 }} />, text: `Due very soon — ${dueInfo.label}`, sev: 'med' });
+  if (riskFlags.length === 0)           riskFlags.push({ icon: <CheckCircleIcon style={{ fontSize: 16 }} />, text: 'No significant risks detected', sev: 'ok' });
 
   const sevColor = { high: '#dc2626', med: '#d97706', low: '#6b7280', ok: '#16a34a' };
 
@@ -246,7 +259,7 @@ function InsightsBody({ task, comments }) {
 
       {/* ── Summary ────────────────────────────────────────────────────── */}
       <div style={ms.section}>
-        <div style={ms.sectionTitle}>📝 Summary</div>
+        <div style={ms.sectionTitle}><SummarizeIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 5 }} />Summary</div>
         <p style={ms.summaryText}>{commentSummary}</p>
       </div>
 
@@ -256,23 +269,26 @@ function InsightsBody({ task, comments }) {
           {task.status?.status || 'Unknown'}
         </span>
         <span style={{ ...ms.chip, background: priorityMeta.bg, color: priorityMeta.color }}>
-          {priorityMeta.icon} {priorityMeta.label}
+          <priorityMeta.Icon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{priorityMeta.label}
         </span>
         {dueInfo && (
           <span style={{ ...ms.chip, background: dueInfo.overdue ? '#fee2e2' : '#f0fdf4', color: dueInfo.overdue ? '#dc2626' : '#15803d' }}>
-            {dueInfo.overdue ? '⚠️' : '📅'} {dueInfo.label}
+            {dueInfo.overdue
+              ? <WarningAmberIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />
+              : <CalendarTodayIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />
+            }{dueInfo.label}
           </span>
         )}
         {task.assignees?.map((a) => (
           <span key={a.id} style={{ ...ms.chip, background: '#eff6ff', color: '#1d4ed8' }}>
-            👤 {a.username || a.email}
+            <PersonIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{a.username || a.email}
           </span>
         ))}
       </div>
 
       {/* ── Progress ───────────────────────────────────────────────────── */}
       <div style={ms.section}>
-        <div style={ms.sectionTitle}>📊 Progress Analysis</div>
+        <div style={ms.sectionTitle}><BarChartIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 5 }} />Progress Analysis</div>
 
         <div style={ms.infoGrid}>
           <div style={ms.infoCell}>
@@ -290,7 +306,7 @@ function InsightsBody({ task, comments }) {
               <div style={ms.cellLabel}>Time Spent</div>
               <div style={{ ...ms.cellValue, color: task.time_spent > task.time_estimate && task.time_estimate ? '#dc2626' : '#374151' }}>
                 {spentTime}
-                {task.time_spent > task.time_estimate && task.time_estimate && ' ⚠️ over estimate'}
+                {task.time_spent > task.time_estimate && task.time_estimate && <> <WarningAmberIcon style={{ fontSize: 12, verticalAlign: 'middle' }} /> over estimate</>}
               </div>
             </div>
           )}
@@ -325,14 +341,14 @@ function InsightsBody({ task, comments }) {
 
         {progressMatches.length > 0 && (
           <div style={ms.progressHint}>
-            ✅ {progressMatches.length} progress indicator{progressMatches.length > 1 ? 's' : ''} in recent comments ({progressMatches.slice(0, 4).join(', ')})
+            <CheckCircleIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />{progressMatches.length} progress indicator{progressMatches.length > 1 ? 's' : ''} in recent comments ({progressMatches.slice(0, 4).join(', ')})
           </div>
         )}
       </div>
 
       {/* ── Risk Indicators ────────────────────────────────────────────── */}
       <div style={ms.section}>
-        <div style={ms.sectionTitle}>⚠️ Risk Indicators</div>
+        <div style={ms.sectionTitle}><WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 5 }} />Risk Indicators</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {riskFlags.map((f, i) => (
             <div key={i} style={{ ...ms.riskRow, color: sevColor[f.sev] }}>
@@ -346,7 +362,7 @@ function InsightsBody({ task, comments }) {
       {/* ── Recent Comments ────────────────────────────────────────────── */}
       {recentComments.length > 0 && (
         <div style={ms.section}>
-          <div style={ms.sectionTitle}>💬 Recent Activity ({Math.min(recentComments.length, 5)} of {comments.length})</div>
+          <div style={ms.sectionTitle}><CommentIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 5 }} />Recent Activity ({Math.min(recentComments.length, 5)} of {comments.length})</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {recentComments.slice(0, 5).map((c, i) => {
               const text = extractCommentText(c);
@@ -360,7 +376,7 @@ function InsightsBody({ task, comments }) {
                   </div>
                   <div style={ms.commentText}>{text.length > 280 ? text.slice(0, 280) + '…' : text}</div>
                   {risks.length > 0 && (
-                    <div style={ms.riskTag}>⚠️ Contains: {risks.join(', ')}</div>
+                    <div style={ms.riskTag}><WarningAmberIcon style={{ fontSize: 12, verticalAlign: 'middle', marginRight: 3 }} />Contains: {risks.join(', ')}</div>
                   )}
                 </div>
               );
@@ -461,7 +477,7 @@ export default function ProjectDetail() {
           {riskMeta && (
             <div style={{ marginTop: '0.5rem' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: riskMeta.bg, color: riskMeta.color, border: `1px solid ${riskMeta.border}`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 700 }}>
-                ⚠️ Avg Risk: {data.avg_risk_rate} · {riskMeta.label}
+                <WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle' }} /> Avg Risk: {data.avg_risk_rate} · {riskMeta.label}
               </span>
             </div>
           )}
@@ -475,14 +491,14 @@ export default function ProjectDetail() {
                 rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}
               >
-                🔗 ClickUp: {data.clickup_id}
+                <LinkIcon style={{ fontSize: 13 }} />ClickUp: {data.clickup_id}
               </a>
 
               <button
                 onClick={() => setShowInsights(true)}
                 style={styles.insightsBtn}
               >
-                🔍 Detailed Insights
+                <SearchIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Detailed Insights
               </button>
             </div>
           )}

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
 import { useApi } from '../hooks/useApi';
+import GroupIcon from '@mui/icons-material/Group';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getMondayOfWeek = () => {
@@ -164,7 +167,7 @@ export default function Capacity() {
       {/* ── Controls card ── */}
       <div style={s.card}>
         <div style={s.headerRow}>
-          <h1 style={s.title}>👥 Resource Capacity Planning</h1>
+          <h1 style={s.title}><GroupIcon style={{ fontSize: 22, verticalAlign: 'middle', marginRight: 6 }} />Resource Capacity Planning</h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={() => setViewMode('weeks')}  style={{ ...s.viewBtn, ...(viewMode === 'weeks'  ? s.viewActive : {}) }}>Weeks</button>
             <button onClick={() => setViewMode('months')} style={{ ...s.viewBtn, ...(viewMode === 'months' ? s.viewActive : {}) }}>Months</button>
@@ -199,7 +202,7 @@ export default function Capacity() {
             </div>
           )}
           <button onClick={load} disabled={loading} style={{ ...s.loadBtn, ...(loading ? s.loadDisabled : {}) }}>
-            {loading ? '⟳ Loading…' : '↻ Load'}
+            {loading ? <><RefreshIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Loading…</> : <><RefreshIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Load</>}
           </button>
         </div>
       </div>
@@ -249,7 +252,7 @@ export default function Capacity() {
       {/* ── Loading ── */}
       {loading && (
         <div style={s.emptyBox}>
-          <div style={{ fontSize: '2rem', opacity: 0.3 }}>⟳</div>
+          <div style={{ fontSize: '2rem', opacity: 0.3 }}><RefreshIcon style={{ fontSize: '2rem' }} /></div>
           <div style={{ color: '#9ca3af', fontWeight: 500 }}>Loading capacity data…</div>
         </div>
       )}
@@ -257,7 +260,7 @@ export default function Capacity() {
       {/* ── Empty state ── */}
       {!loading && data && resources.length === 0 && (
         <div style={s.emptyBox}>
-          <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>👥</div>
+          <div style={{ fontSize: '2.5rem', opacity: 0.3 }}><GroupIcon style={{ fontSize: '2.5rem' }} /></div>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#374151' }}>No resource allocations found</div>
           <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '0.25rem' }}>
             Assign resources with estimated hours to tasks to see capacity data.
@@ -380,7 +383,7 @@ export default function Capacity() {
               <div style={{ fontWeight: 700, color: '#0A2B14', fontSize: '0.92rem' }}>{popup.userName}</div>
               <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Week of {popup.label}</div>
             </div>
-            <button onClick={() => setPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.1rem', padding: '0', lineHeight: 1 }}>✕</button>
+            <button onClick={() => setPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1.1rem', padding: '0', lineHeight: 1 }}><CloseIcon style={{ fontSize: 18 }} /></button>
           </div>
 
           {/* Allocation summary */}

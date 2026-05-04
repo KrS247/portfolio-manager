@@ -7,13 +7,19 @@ import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import TaskForm from '../components/TaskForm';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import CloseIcon from '@mui/icons-material/Close';
 
 function ViewToggle({ view, onChange }) {
   const base = { padding: '0.3rem 0.85rem', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' };
   return (
     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-      <button style={{ ...base, borderRight: '1px solid #e5e7eb', background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}>⊞ List</button>
-      <button style={{ ...base, background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}>☰ Table</button>
+      <button style={{ ...base, borderRight: '1px solid #e5e7eb', background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}><ViewListIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />List</button>
+      <button style={{ ...base, background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}><TableRowsIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Table</button>
     </div>
   );
 }
@@ -95,10 +101,12 @@ export default function Tasks() {
 
   const SortTh = ({ col, label, style }) => {
     const active = sortCol === col;
-    const icon = active ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ↕';
+    const icon = active
+      ? (sortDir === 'asc' ? <ArrowUpwardIcon style={{ fontSize: 11, verticalAlign: 'middle' }} /> : <ArrowDownwardIcon style={{ fontSize: 11, verticalAlign: 'middle' }} />)
+      : <UnfoldMoreIcon style={{ fontSize: 11, verticalAlign: 'middle', opacity: 0.4 }} />;
     return (
       <th onClick={() => handleSort(col)} style={{ ...tStyles.th, cursor: 'pointer', userSelect: 'none', ...style }}>
-        {label}<span style={{ opacity: active ? 1 : 0.45, fontSize: '0.65rem' }}>{icon}</span>
+        {label} {icon}
       </th>
     );
   };
@@ -132,7 +140,7 @@ export default function Tasks() {
         {hasActiveFilters && (
           <button onClick={clearFilters}
             style={{ padding: '0.35rem 0.9rem', borderRadius: '20px', border: '1px solid #fca5a5', cursor: 'pointer', fontWeight: 600, fontSize: '0.83rem', background: '#fee2e2', color: '#991b1b' }}>
-            ✕ Clear filters
+            <CloseIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 2 }} />Clear filters
           </button>
         )}
         <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#6b7280', alignSelf: 'center' }}>{sorted.length} tasks</span>
@@ -158,7 +166,7 @@ export default function Tasks() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {sorted.map(task => (
-              <div key={task.id} style={{ background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div key={task.id} className="pm-card" style={{ background: '#fff', borderRadius: '10px', padding: '1rem 1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <PriorityBadge priority={task.priority} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, color: '#1d1d1d' }}>{task.title}</div>
@@ -257,7 +265,7 @@ export default function Tasks() {
                   <td style={tStyles.filterCell}>
                     {hasActiveFilters && (
                       <button onClick={clearFilters} style={{ fontSize: '0.72rem', padding: '2px 8px', background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                        ✕ Clear
+                        <CloseIcon style={{ fontSize: 11, verticalAlign: 'middle', marginRight: 2 }} />Clear
                       </button>
                     )}
                   </td>
@@ -266,7 +274,7 @@ export default function Tasks() {
             </thead>
             <tbody>
               {sorted.map((task, i) => (
-                <tr key={task.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
+                <tr key={task.id} className="pm-row" style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
                   <td style={tStyles.td}><PriorityBadge priority={task.priority} /></td>
                   <td style={tStyles.td}><div style={{ fontWeight: 600, color: '#1d1d1d', fontSize: '0.88rem' }}>{task.title}</div></td>
                   <td style={{ ...tStyles.td, fontSize: '0.82rem', color: '#6b7280' }}>{task.portfolio_name || '—'}</td>

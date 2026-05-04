@@ -7,6 +7,13 @@ import TaskForm from './TaskForm';
 import ConfirmDialog from './ConfirmDialog';
 import InteractiveGanttChart from './InteractiveGanttChart';
 import BaselinePanel from './BaselinePanel';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 
 const RISK_COLORS = {
   'Low Risk':      { color: '#16a34a', bg: '#dcfce7' },
@@ -67,13 +74,13 @@ function TaskNode({ task, depth, canEdit, onEdit, onDelete, onAddSubtask, expand
               onClick={() => toggleExpand(task.id)}
               title={isExpanded ? 'Collapse' : 'Expand'}
             >
-              {isExpanded ? '▼' : '▶'}
+              {isExpanded ? <ExpandMoreIcon style={{ fontSize: 14 }} /> : <ChevronRightIcon style={{ fontSize: 14 }} />}
             </span>
-            {canEdit && depth === 0 && <span style={styles.grip} title="Drag to reorder">⠿</span>}
+            {canEdit && depth === 0 && <span style={styles.grip} title="Drag to reorder"><DragIndicatorIcon style={{ fontSize: 18 }} /></span>}
             <PriorityBadge priority={task.priority} />
             <div style={{ flex: 1 }}>
               <div style={styles.taskTitle}>
-                {task.is_milestone ? '⭐ ' : ''}{task.title}
+                {task.is_milestone ? <><StarBorderIcon style={{ fontSize: 14, verticalAlign: 'middle', color: '#d97706', marginRight: 2 }} /></> : ''}{task.title}
                 {hasChildren && (
                   <span style={styles.subtaskCount}>{task._children.length} subtask{task._children.length !== 1 ? 's' : ''}</span>
                 )}
@@ -85,8 +92,8 @@ function TaskNode({ task, depth, canEdit, onEdit, onDelete, onAddSubtask, expand
                 {task.risk_status && (() => {
                   const rc = RISK_COLORS[task.risk_status] || {};
                   return (
-                    <span style={{ background: rc.bg, color: rc.color, fontWeight: 700, borderRadius: '20px', padding: '1px 8px', fontSize: '0.72rem' }}>
-                      ⚠️ {task.risk_status}
+                    <span style={{ background: rc.bg, color: rc.color, fontWeight: 700, borderRadius: '20px', padding: '1px 8px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <WarningAmberIcon style={{ fontSize: 12 }} />{task.risk_status}
                     </span>
                   );
                 })()}
@@ -191,8 +198,8 @@ export default function TaskList({ tasks, parentType, parentId, canEdit, canAdd 
         <h3 style={styles.heading}>Tasks</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={styles.viewToggle}>
-            <button style={{ ...styles.viewBtn, ...(view === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setView('list')}>☰ List</button>
-            <button style={{ ...styles.viewBtn, ...(view === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setView('gantt')}>📊 Gantt</button>
+            <button style={{ ...styles.viewBtn, ...(view === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setView('list')}><FormatListBulletedIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />List</button>
+            <button style={{ ...styles.viewBtn, ...(view === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setView('gantt')}><BarChartIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Gantt</button>
           </div>
           {canEdit && canAdd && (
             <button style={styles.addBtn} onClick={() => setShowForm(true)}>+ Add Task</button>

@@ -1,29 +1,52 @@
 import { useState } from 'react';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import HomeIcon from '@mui/icons-material/Home';
+import WorkIcon from '@mui/icons-material/Work';
+import FolderIcon from '@mui/icons-material/Folder';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import SettingsIcon from '@mui/icons-material/Settings';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import GroupIcon from '@mui/icons-material/Group';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import SecurityIcon from '@mui/icons-material/Security';
+import LinkIcon from '@mui/icons-material/Link';
+import PersonIcon from '@mui/icons-material/Person';
+import KeyIcon from '@mui/icons-material/Key';
+import BusinessIcon from '@mui/icons-material/Business';
+import LabelIcon from '@mui/icons-material/Label';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import CloseIcon from '@mui/icons-material/Close';
 
 const SECTIONS = [
-  { id: 'overview',      label: '📋 Overview' },
-  { id: 'dashboard',     label: '🏠 Dashboard' },
-  { id: 'portfolios',    label: '💼 Portfolios' },
-  { id: 'programs',      label: '📁 Programs' },
-  { id: 'projects',      label: '🗂️ Projects' },
-  { id: 'tasks',         label: '✅ Tasks' },
-  { id: 'subtasks',      label: '↳ Subtasks' },
-  { id: 'gantt',         label: '📅 Gantt Chart' },
-  { id: 'scheduling',    label: '⚙️ Scheduling Engine' },
-  { id: 'baselines',     label: '📐 Schedule Baselines' },
-  { id: 'calendar',      label: '📆 Working Calendar' },
-  { id: 'evm',           label: '📊 Earned Value (EVM)' },
-  { id: 'resources',     label: '👥 Resourcing' },
-  { id: 'risks',         label: '⚠️ Risks' },
-  { id: 'risk-management', label: '🛡️ Risk Management Page' },
-  { id: 'clickup',       label: '🔗 ClickUp Integration' },
-  { id: 'admin-users',   label: '👤 Managing Users' },
-  { id: 'admin-roles',   label: '🔑 Roles & Permissions' },
-  { id: 'admin-teams',   label: '🏢 Teams' },
-  { id: 'admin-company', label: '🏷️ Company Setup' },
-  { id: 'admin-calendar',label: '📆 Working Calendar Admin' },
-  { id: 'reports',       label: '📊 Reports' },
-  { id: 'capacity',      label: '👥 Resource Capacity' },
+  { id: 'overview',       label: 'Overview',               Icon: AssignmentIcon },
+  { id: 'dashboard',      label: 'Dashboard',              Icon: HomeIcon },
+  { id: 'portfolios',     label: 'Portfolios',             Icon: WorkIcon },
+  { id: 'programs',       label: 'Programs',               Icon: FolderIcon },
+  { id: 'projects',       label: 'Projects',               Icon: FolderSpecialIcon },
+  { id: 'tasks',          label: 'Tasks',                  Icon: TaskAltIcon },
+  { id: 'subtasks',       label: 'Subtasks',               Icon: SubdirectoryArrowRightIcon },
+  { id: 'gantt',          label: 'Gantt Chart',            Icon: CalendarTodayIcon },
+  { id: 'scheduling',     label: 'Scheduling Engine',      Icon: SettingsIcon },
+  { id: 'baselines',      label: 'Schedule Baselines',     Icon: StraightenIcon },
+  { id: 'calendar',       label: 'Working Calendar',       Icon: DateRangeIcon },
+  { id: 'evm',            label: 'Earned Value (EVM)',     Icon: BarChartIcon },
+  { id: 'resources',      label: 'Resourcing',             Icon: GroupIcon },
+  { id: 'risks',          label: 'Risks',                  Icon: WarningAmberIcon },
+  { id: 'risk-management',label: 'Risk Management Page',   Icon: SecurityIcon },
+  { id: 'clickup',        label: 'ClickUp Integration',    Icon: LinkIcon },
+  { id: 'admin-users',    label: 'Managing Users',         Icon: PersonIcon },
+  { id: 'admin-roles',    label: 'Roles & Permissions',    Icon: KeyIcon },
+  { id: 'admin-teams',    label: 'Teams',                  Icon: BusinessIcon },
+  { id: 'admin-company',  label: 'Company Setup',          Icon: LabelIcon },
+  { id: 'admin-calendar', label: 'Working Calendar Admin', Icon: DateRangeIcon },
+  { id: 'reports',        label: 'Reports',                Icon: BarChartIcon },
+  { id: 'capacity',       label: 'Resource Capacity',      Icon: GroupIcon },
 ];
 
 function Section({ id, title, children }) {
@@ -46,11 +69,19 @@ function Steps({ items }) {
 }
 
 function Note({ children }) {
-  return <div style={sc.note}><strong>💡 Note:</strong> {children}</div>;
+  return (
+    <div style={sc.note}>
+      <strong><LightbulbIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Note:</strong> {children}
+    </div>
+  );
 }
 
 function Warn({ children }) {
-  return <div style={sc.warn}><strong>⚠️ Important:</strong> {children}</div>;
+  return (
+    <div style={sc.warn}>
+      <strong><WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Important:</strong> {children}
+    </div>
+  );
 }
 
 function SubHeading({ children }) {
@@ -73,10 +104,10 @@ export default function UserManual({ onClose }) {
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div style={sc.header}>
           <div>
-            <div style={sc.headerTitle}>📖 User Manual</div>
+            <div style={sc.headerTitle}><MenuBookIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 6 }} />User Manual</div>
             <div style={sc.headerSub}>Portfolio Manager — Complete Guide</div>
           </div>
-          <button onClick={onClose} style={sc.closeBtn} title="Close">✕</button>
+          <button onClick={onClose} style={sc.closeBtn} title="Close"><CloseIcon style={{ fontSize: 18 }} /></button>
         </div>
 
         <div style={sc.body}>
@@ -90,7 +121,7 @@ export default function UserManual({ onClose }) {
                 onClick={() => scrollTo(s.id)}
                 style={{ ...sc.tocItem, ...(active === s.id ? sc.tocActive : {}) }}
               >
-                {s.label}
+                <s.Icon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 5 }} />{s.label}
               </button>
             ))}
           </nav>
@@ -99,21 +130,21 @@ export default function UserManual({ onClose }) {
           <div style={sc.content}>
 
             {/* OVERVIEW */}
-            <Section id="overview" title="📋 Overview">
+            <Section id="overview" title="Overview">
               <p style={sc.p}>
                 The <strong>Portfolio Manager</strong> is a web-based project management platform that organises work across a four-level hierarchy:
               </p>
               <div style={sc.hierarchy}>
-                <div style={sc.hLevel}><span style={sc.hIcon}>💼</span> <strong>Portfolio</strong> — top-level grouping (e.g. a business unit or product line)</div>
-                <div style={sc.hLevel}><span style={sc.hIcon}>📁</span> <strong>Program</strong> — a collection of related projects within a portfolio</div>
-                <div style={sc.hLevel}><span style={sc.hIcon}>🗂️</span> <strong>Project</strong> — a distinct deliverable within a program</div>
-                <div style={sc.hLevel}><span style={sc.hIcon}>✅</span> <strong>Task</strong> — individual work items within a project, which can have sub-tasks</div>
+                <div style={sc.hLevel}><WorkIcon style={sc.hIcon} /> <strong>Portfolio</strong> — top-level grouping (e.g. a business unit or product line)</div>
+                <div style={sc.hLevel}><FolderIcon style={sc.hIcon} /> <strong>Program</strong> — a collection of related projects within a portfolio</div>
+                <div style={sc.hLevel}><FolderSpecialIcon style={sc.hIcon} /> <strong>Project</strong> — a distinct deliverable within a program</div>
+                <div style={sc.hLevel}><TaskAltIcon style={sc.hIcon} /> <strong>Task</strong> — individual work items within a project, which can have sub-tasks</div>
               </div>
               <Note>All actions are permission-controlled. If a button is missing, your role may not have access to that feature.</Note>
             </Section>
 
             {/* DASHBOARD */}
-            <Section id="dashboard" title="🏠 Dashboard">
+            <Section id="dashboard" title="Dashboard">
               <p style={sc.p}>The Dashboard provides a real-time overview of the entire portfolio.</p>
 
               <SubHeading>Summary Cards</SubHeading>
@@ -146,7 +177,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* PORTFOLIOS */}
-            <Section id="portfolios" title="💼 Portfolios">
+            <Section id="portfolios" title="Portfolios">
               <SubHeading>Viewing Portfolios</SubHeading>
               <p style={sc.p}>Navigate to <strong>Portfolios</strong> in the sidebar to see all portfolios you have access to. Each card shows the name, status, priority, date range, and counts of programs, projects, and tasks.</p>
 
@@ -176,7 +207,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* PROGRAMS */}
-            <Section id="programs" title="📁 Programs">
+            <Section id="programs" title="Programs">
               <SubHeading>Viewing Programs</SubHeading>
               <p style={sc.p}>Click <strong>Programs</strong> in the sidebar to see all programs across every portfolio. Use the <strong>Portfolios</strong> detail page to see programs for a specific portfolio.</p>
 
@@ -197,7 +228,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* PROJECTS */}
-            <Section id="projects" title="🗂️ Projects">
+            <Section id="projects" title="Projects">
               <SubHeading>Viewing Projects</SubHeading>
               <p style={sc.p}>Click <strong>Projects</strong> in the sidebar to see all projects. Click any project name to open its detail page.</p>
 
@@ -216,27 +247,27 @@ export default function UserManual({ onClose }) {
                 <li style={sc.li}>Project metadata, completion bar, and average risk rating.</li>
                 <li style={sc.li}>A <strong>List / Gantt</strong> toggle to switch between the task tree and Gantt chart.</li>
                 <li style={sc.li}>A <strong>+ Add Task</strong> button to create tasks directly within this project.</li>
-                <li style={sc.li}>A <strong>📐 Schedule Baselines</strong> panel (in Gantt view) for saving and comparing baselines.</li>
-                <li style={sc.li}>A <strong>📊 EVM panel</strong> showing earned value metrics for this project's tasks.</li>
-                <li style={sc.li}>A <strong>🔍 Detailed Insights</strong> button (if a ClickUp ID is set) to pull live data from ClickUp.</li>
+                <li style={sc.li}>A <strong>Schedule Baselines</strong> panel (in Gantt view) for saving and comparing baselines.</li>
+                <li style={sc.li}>An <strong>EVM panel</strong> showing earned value metrics for this project's tasks.</li>
+                <li style={sc.li}>A <strong>Detailed Insights</strong> button (if a ClickUp ID is set) to pull live data from ClickUp.</li>
               </ul>
 
               <Note>Tasks can only be added from the Project detail page, not from the Programs or Portfolios pages.</Note>
             </Section>
 
             {/* TASKS */}
-            <Section id="tasks" title="✅ Tasks">
+            <Section id="tasks" title="Tasks">
               <SubHeading>Viewing All Tasks</SubHeading>
               <p style={sc.p}>Click <strong>Tasks</strong> in the sidebar. Switch between <strong>List</strong> (card) and <strong>Table</strong> views using the toggle. Use the filter buttons (All / Mine / Open / In Progress) to narrow the list. The table view shows sortable <em>Portfolio → Program → Project</em> breadcrumb columns.</p>
 
               <SubHeading>Task Form Tabs</SubHeading>
               <p style={sc.p}>The task create/edit form has five tabs:</p>
               <ul style={sc.ul}>
-                <li style={sc.li}><strong>📋 Task Details</strong> — title, description, priority, status, % complete, dates, milestone flag, parent task, and dependencies.</li>
-                <li style={sc.li}><strong>⚠️ Risk</strong> — probability, impact, risk name, description, mitigation plan, and risk status (Open / Active / Mitigated / Closed).</li>
-                <li style={sc.li}><strong>👥 Resourcing</strong> — assign team members with estimated and actual hours.</li>
-                <li style={sc.li}><strong>📅 Schedule</strong> — constraint type, constraint date, schedule mode, and read-only CPM results.</li>
-                <li style={sc.li}><strong>📝 Notes</strong> — a large free-text area for meeting notes, decisions, links, or any additional context. A ✓ badge appears on the tab when notes exist.</li>
+                <li style={sc.li}><strong>Task Details</strong> — title, description, priority, status, % complete, dates, milestone flag, parent task, and dependencies.</li>
+                <li style={sc.li}><strong>Risk</strong> — probability, impact, risk name, description, mitigation plan, and risk status (Open / Active / Mitigated / Closed).</li>
+                <li style={sc.li}><strong>Resourcing</strong> — assign team members with estimated and actual hours.</li>
+                <li style={sc.li}><strong>Schedule</strong> — constraint type, constraint date, schedule mode, and read-only CPM results.</li>
+                <li style={sc.li}><strong>Notes</strong> — a large free-text area for meeting notes, decisions, links, or any additional context. A check badge appears on the tab when notes exist.</li>
               </ul>
 
               <SubHeading>Creating a Task</SubHeading>
@@ -269,7 +300,7 @@ export default function UserManual({ onClose }) {
               <Warn>Deleting a task also deletes all its sub-tasks.</Warn>
 
               <SubHeading>Reordering Tasks</SubHeading>
-              <p style={sc.p}>Drag the ⠿ handle on the left of any task row to reorder tasks within the project.</p>
+              <p style={sc.p}>Drag the handle icon on the left of any task row to reorder tasks within the project.</p>
 
               <SubHeading>Task Status Values</SubHeading>
               <ul style={sc.ul}>
@@ -281,7 +312,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* SUBTASKS */}
-            <Section id="subtasks" title="↳ Subtasks">
+            <Section id="subtasks" title="Subtasks">
               <p style={sc.p}>Tasks support unlimited nesting — a task can have sub-tasks, which can themselves have sub-tasks.</p>
 
               <SubHeading>Creating a Sub-task</SubHeading>
@@ -296,7 +327,7 @@ export default function UserManual({ onClose }) {
 
               <SubHeading>Expanding / Collapsing Sub-tasks</SubHeading>
               <Steps items={[
-                'Click the ▶ / ▼ toggle next to a task that has sub-tasks.',
+                'Click the expand / collapse toggle next to a task that has sub-tasks.',
                 'Sub-tasks are indented below their parent.',
               ]} />
 
@@ -312,7 +343,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* GANTT */}
-            <Section id="gantt" title="📅 Gantt Chart">
+            <Section id="gantt" title="Gantt Chart">
               <p style={sc.p}>The Gantt chart provides a visual timeline for tasks and projects. It is available on Project detail pages and the Dashboard.</p>
 
               <SubHeading>Switching to Gantt View</SubHeading>
@@ -323,7 +354,7 @@ export default function UserManual({ onClose }) {
 
               <SubHeading>Reading the Chart</SubHeading>
               <ul style={sc.ul}>
-                <li style={sc.li}>Each row represents a task. Sub-tasks are indented below their parent with a <strong>↳</strong> connector.</li>
+                <li style={sc.li}>Each row represents a task. Sub-tasks are indented below their parent with a connector arrow.</li>
                 <li style={sc.li}>Bars are coloured by status (green = open, amber = in progress, grey = cancelled, bright green = completed).</li>
                 <li style={sc.li}>A white overlay inside the bar shows <strong>% complete</strong>.</li>
                 <li style={sc.li}>Diamond shapes ◆ represent <strong>milestones</strong>.</li>
@@ -340,7 +371,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* SCHEDULING ENGINE */}
-            <Section id="scheduling" title="⚙️ Scheduling Engine">
+            <Section id="scheduling" title="Scheduling Engine">
               <p style={sc.p}>
                 The Scheduling Engine automatically calculates task start and finish dates using the <strong>Critical Path Method (CPM)</strong>. It runs automatically whenever a task's dates or dependencies change.
               </p>
@@ -352,7 +383,7 @@ export default function UserManual({ onClose }) {
               </ul>
 
               <SubHeading>Constraint Types</SubHeading>
-              <p style={sc.p}>Open a task's <strong>📅 Schedule</strong> tab to set a constraint:</p>
+              <p style={sc.p}>Open a task's <strong>Schedule</strong> tab to set a constraint:</p>
               <ul style={sc.ul}>
                 <li style={sc.li}><strong>ASAP</strong> — As Soon As Possible (default). Task starts at the earliest date allowed by its predecessors.</li>
                 <li style={sc.li}><strong>ALAP</strong> — As Late As Possible. Task is pushed as late as possible without delaying the project end.</li>
@@ -363,7 +394,7 @@ export default function UserManual({ onClose }) {
               </ul>
 
               <SubHeading>Dependencies with Lag / Lead Time</SubHeading>
-              <p style={sc.p}>Open the <strong>📋 Task Details</strong> tab and scroll to <em>Dependencies</em> to add predecessor tasks:</p>
+              <p style={sc.p}>Open the <strong>Task Details</strong> tab and scroll to <em>Dependencies</em> to add predecessor tasks:</p>
               <Steps items={[
                 'Click the "— Add predecessor —" dropdown and select a task.',
                 'Set a Lag value: positive = gap days after the predecessor finishes; negative = overlap (lead time).',
@@ -372,7 +403,7 @@ export default function UserManual({ onClose }) {
               ]} />
 
               <SubHeading>CPM Results (read-only)</SubHeading>
-              <p style={sc.p}>After the engine runs, the <strong>📅 Schedule tab</strong> of any task shows the calculated CPM fields:</p>
+              <p style={sc.p}>After the engine runs, the <strong>Schedule tab</strong> of any task shows the calculated CPM fields:</p>
               <ul style={sc.ul}>
                 <li style={sc.li}><strong>Early Start / Early Finish</strong> — earliest the task can start/finish given its predecessors.</li>
                 <li style={sc.li}><strong>Late Start / Late Finish</strong> — latest it can start/finish without delaying the project.</li>
@@ -395,7 +426,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* SCHEDULE BASELINES */}
-            <Section id="baselines" title="📐 Schedule Baselines">
+            <Section id="baselines" title="Schedule Baselines">
               <p style={sc.p}>
                 A <strong>baseline</strong> is a named snapshot of all task dates at a point in time. You can compare the current schedule against a baseline to see how dates have shifted.
               </p>
@@ -403,9 +434,9 @@ export default function UserManual({ onClose }) {
               <SubHeading>Saving a Baseline</SubHeading>
               <Steps items={[
                 'Open a Project detail page and switch to Gantt view.',
-                'Scroll down to the 📐 Schedule Baselines panel.',
+                'Scroll down to the Schedule Baselines panel.',
                 'Type a name (e.g. "Sprint 1 Baseline").',
-                'Click 📸 Save Baseline.',
+                'Click Save Baseline.',
               ]} />
 
               <SubHeading>Comparing a Baseline</SubHeading>
@@ -422,14 +453,14 @@ export default function UserManual({ onClose }) {
 
               <SubHeading>Deleting a Baseline</SubHeading>
               <Steps items={[
-                'Click the ✕ button next to the baseline name.',
+                'Click the close button next to the baseline name.',
                 'Confirm deletion.',
               ]} />
               <Note>Baselines are stored permanently until deleted. Save a new baseline before any major re-planning session.</Note>
             </Section>
 
             {/* WORKING CALENDAR */}
-            <Section id="calendar" title="📆 Working Calendar">
+            <Section id="calendar" title="Working Calendar">
               <p style={sc.p}>
                 The scheduling engine uses the <strong>Working Calendar</strong> to skip weekends and public holidays when calculating dates and float values.
               </p>
@@ -440,7 +471,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* EVM */}
-            <Section id="evm" title="📊 Earned Value Management (EVM)">
+            <Section id="evm" title="Earned Value Management (EVM)">
               <p style={sc.p}>
                 The <strong>EVM panel</strong> appears on every Project, Program, and Portfolio detail page, and on the Dashboard. It gives a quantitative view of schedule and cost performance.
               </p>
@@ -481,16 +512,16 @@ export default function UserManual({ onClose }) {
               </ul>
 
               <SubHeading>S-Curve Chart</SubHeading>
-              <p style={sc.p}>The <strong>📈 S-Curve</strong> tab shows Planned Value (blue), Earned Value (green), and Actual Cost (amber) plotted month by month. A healthy project shows EV tracking closely to PV, with AC below EV.</p>
+              <p style={sc.p}>The <strong>S-Curve</strong> tab shows Planned Value (blue), Earned Value (green), and Actual Cost (amber) plotted month by month. A healthy project shows EV tracking closely to PV, with AC below EV.</p>
 
               <SubHeading>Task Detail Table</SubHeading>
-              <p style={sc.p}>The <strong>📑 Task Detail</strong> tab breaks down all EVM metrics per task, allowing you to identify which specific tasks are driving cost or schedule overruns.</p>
+              <p style={sc.p}>The <strong>Task Detail</strong> tab breaks down all EVM metrics per task, allowing you to identify which specific tasks are driving cost or schedule overruns.</p>
 
-              <Note>EVM data refreshes each time you open the panel. Click the ↻ button to force a refresh.</Note>
+              <Note>EVM data refreshes each time you open the panel. Click the Refresh button to force a refresh.</Note>
             </Section>
 
             {/* RESOURCING */}
-            <Section id="resources" title="👥 Resourcing">
+            <Section id="resources" title="Resourcing">
               <p style={sc.p}>Each task can have one or more team members assigned with estimated and actual hour allocations.</p>
 
               <SubHeading>Adding Resources to a Task</SubHeading>
@@ -513,13 +544,13 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* RISKS */}
-            <Section id="risks" title="⚠️ Risks">
+            <Section id="risks" title="Risks">
               <p style={sc.p}>Each task can have an associated risk record with probability, impact, and lifecycle status.</p>
 
               <SubHeading>Adding a Risk to a Task</SubHeading>
               <Steps items={[
                 'Open the task create or edit form.',
-                'Click the ⚠️ Risk tab.',
+                'Click the Risk tab.',
                 'Enter a Risk Name (leave blank to skip adding a risk).',
                 'Select a Risk Status: Open, Active, Mitigated, or Closed.',
                 'Enter a Description.',
@@ -548,7 +579,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* RISK MANAGEMENT PAGE */}
-            <Section id="risk-management" title="🛡️ Risk Management Page">
+            <Section id="risk-management" title="Risk Management Page">
               <p style={sc.p}>The <strong>Risk Management</strong> page provides a consolidated, filterable view of every risk across all portfolios, programs, and projects. Navigate to <strong>Risk Management</strong> in the sidebar.</p>
 
               <SubHeading>Summary Chips</SubHeading>
@@ -580,7 +611,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* CLICKUP */}
-            <Section id="clickup" title="🔗 ClickUp Integration">
+            <Section id="clickup" title="ClickUp Integration">
               <p style={sc.p}>Projects with a ClickUp ID linked can pull live task data, comments, and insights directly from ClickUp.</p>
 
               <SubHeading>Linking a Project to ClickUp</SubHeading>
@@ -593,7 +624,7 @@ export default function UserManual({ onClose }) {
               <SubHeading>Viewing Detailed Insights</SubHeading>
               <Steps items={[
                 'Open the Project detail page.',
-                'Click the 🔍 Detailed Insights button (only visible when a ClickUp ID is set).',
+                'Click the Detailed Insights button (only visible when a ClickUp ID is set).',
                 'The panel shows: comment summary, status, priority, due date, time estimates, checklist completion, risk indicators, and recent comments.',
               ]} />
 
@@ -604,7 +635,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* ADMIN - USERS */}
-            <Section id="admin-users" title="👤 Managing Users">
+            <Section id="admin-users" title="Managing Users">
               <p style={sc.p}>Navigate to <strong>Administration → Users</strong>.</p>
 
               <SubHeading>Creating a User</SubHeading>
@@ -632,7 +663,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* ADMIN - ROLES & PERMISSIONS */}
-            <Section id="admin-roles" title="🔑 Roles & Permissions">
+            <Section id="admin-roles" title="Roles & Permissions">
               <SubHeading>Roles</SubHeading>
               <p style={sc.p}>Navigate to <strong>Administration → Roles</strong> to create and manage roles. Each user is assigned one role.</p>
               <Steps items={[
@@ -654,7 +685,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* ADMIN - TEAMS */}
-            <Section id="admin-teams" title="🏢 Teams">
+            <Section id="admin-teams" title="Teams">
               <p style={sc.p}>Teams are used to group users. Navigate to <strong>Administration → Teams</strong>.</p>
 
               <SubHeading>Creating a Team</SubHeading>
@@ -666,9 +697,9 @@ export default function UserManual({ onClose }) {
 
               <SubHeading>Editing a Team Name</SubHeading>
               <Steps items={[
-                'Click the Edit (✏️) icon next to the team name.',
+                'Click the Edit (pencil) icon next to the team name.',
                 'Type the new name in the inline input field.',
-                'Click the ✓ tick to confirm, or ✕ to cancel.',
+                'Click the check icon to confirm, or the close icon to cancel.',
               ]} />
 
               <SubHeading>Deleting a Team</SubHeading>
@@ -679,7 +710,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* ADMIN - COMPANY SETUP */}
-            <Section id="admin-company" title="🏷️ Company Setup">
+            <Section id="admin-company" title="Company Setup">
               <p style={sc.p}>Navigate to <strong>Administration → Company Setup</strong> to customise the application branding.</p>
 
               <SubHeading>Setting the Company Name</SubHeading>
@@ -707,7 +738,7 @@ export default function UserManual({ onClose }) {
             </Section>
 
             {/* ADMIN - WORKING CALENDAR */}
-            <Section id="admin-calendar" title="📆 Working Calendar Admin">
+            <Section id="admin-calendar" title="Working Calendar Admin">
               <p style={sc.p}>Navigate to <strong>Administration → Working Calendar</strong> to configure company-wide scheduling rules.</p>
 
               <SubHeading>Setting Working Days</SubHeading>
@@ -730,13 +761,13 @@ export default function UserManual({ onClose }) {
                 'Tick "Recurring (annual)" to apply the holiday every year on the same date.',
                 'Click + Add Holiday.',
                 'The holiday appears in the list below.',
-                'Click ✕ to delete a holiday.',
+                'Click the close button to delete a holiday.',
               ]} />
               <Note>Public holidays are skipped when the scheduling engine calculates working-day durations and float values.</Note>
             </Section>
 
             {/* REPORTS */}
-            <Section id="reports" title="📊 Reports">
+            <Section id="reports" title="Reports">
               <p style={sc.p}>The <strong>Reports</strong> page generates printable, PDF-exportable summaries of your portfolio data. Navigate to <strong>Reports</strong> in the sidebar.</p>
 
               <SubHeading>How to Generate a Report</SubHeading>
@@ -744,9 +775,9 @@ export default function UserManual({ onClose }) {
                 'Click the report type you want from the 9-card grid at the top.',
                 'If the report supports multiple scope types (portfolio / program / project), select one from the Scope Type dropdown.',
                 'Choose the specific portfolio, program, or project from the next dropdown.',
-                'Click ▶ Generate Report.',
+                'Click Generate Report.',
                 'The report renders below the controls.',
-                'Click 🖨 Print / Export PDF to open the browser print dialog — choose "Save as PDF" to export.',
+                'Click Print / Export PDF to open the browser print dialog — choose "Save as PDF" to export.',
               ]} />
 
               <SubHeading>Available Reports</SubHeading>
@@ -760,15 +791,15 @@ export default function UserManual({ onClose }) {
                 </thead>
                 <tbody>
                   {[
-                    ['📊 Portfolio Status',     'Portfolio',              'Executive summary: EVM KPIs, task counts, program list with progress'],
-                    ['📋 Program Report',       'Program',                'Program health, project list, EVM summary, top risks'],
-                    ['🗂️ Project Report',        'Project',                'Full project detail: tasks table, EVM, resource utilisation, risk register'],
-                    ['📈 EVM Performance',      'Portfolio/Program/Project','All EVM metrics with formulas, S-curve chart, per-task EVM table'],
-                    ['📅 Schedule Variance',    'Portfolio/Program/Project','Baseline vs actual dates, days early/late per task (requires saved baseline)'],
-                    ['👥 Resource Utilisation', 'Portfolio/Program/Project','Per-user hours & costs, utilisation %, over-budget flagging'],
-                    ['⚠️ Risk Register',        'Portfolio/Program/Project','Risk heat map, all risks ranked by rate with mitigation plans'],
-                    ['💰 Over-Budget',          'Portfolio/Program/Project','Tasks where actual cost exceeds earned value, with overrun amounts'],
-                    ['✅ Task Status',          'Portfolio/Program/Project','Full task list with status, dates, completion bar; filterable & sortable'],
+                    ['Portfolio Status',     'Portfolio',               'Executive summary: EVM KPIs, task counts, program list with progress'],
+                    ['Program Report',       'Program',                 'Program health, project list, EVM summary, top risks'],
+                    ['Project Report',       'Project',                 'Full project detail: tasks table, EVM, resource utilisation, risk register'],
+                    ['EVM Performance',      'Portfolio/Program/Project','All EVM metrics with formulas, S-curve chart, per-task EVM table'],
+                    ['Schedule Variance',    'Portfolio/Program/Project','Baseline vs actual dates, days early/late per task (requires saved baseline)'],
+                    ['Resource Utilisation', 'Portfolio/Program/Project','Per-user hours & costs, utilisation %, over-budget flagging'],
+                    ['Risk Register',        'Portfolio/Program/Project','Risk heat map, all risks ranked by rate with mitigation plans'],
+                    ['Over-Budget',          'Portfolio/Program/Project','Tasks where actual cost exceeds earned value, with overrun amounts'],
+                    ['Task Status',          'Portfolio/Program/Project','Full task list with status, dates, completion bar; filterable & sortable'],
                   ].map(([report, scope, desc], i) => (
                     <tr key={report} style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
                       <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600, borderBottom: '1px solid #f3f4f6' }}>{report}</td>
@@ -780,7 +811,7 @@ export default function UserManual({ onClose }) {
               </table>
 
               <SubHeading>Printing & PDF Export</SubHeading>
-              <p style={sc.p}>All reports are print-optimised. When you click <strong>🖨 Print / Export PDF</strong>, the browser print dialog opens. To save as PDF:</p>
+              <p style={sc.p}>All reports are print-optimised. When you click <strong>Print / Export PDF</strong>, the browser print dialog opens. To save as PDF:</p>
               <Steps items={[
                 'In the print dialog, set the Destination to "Save as PDF".',
                 'Set paper size to A4 or Letter.',
@@ -790,11 +821,11 @@ export default function UserManual({ onClose }) {
               <Note>The report controls (type picker, scope selectors) are automatically hidden when printing — only the report content is included.</Note>
 
               <SubHeading>Schedule Variance Report — Baselines</SubHeading>
-              <p style={sc.p}>The Schedule Variance report requires at least one saved baseline. To create one, open any Gantt view (project / program / portfolio detail) and use the Baselines panel below the chart to save a named snapshot. See the <strong>📐 Schedule Baselines</strong> section for details.</p>
+              <p style={sc.p}>The Schedule Variance report requires at least one saved baseline. To create one, open any Gantt view (project / program / portfolio detail) and use the Baselines panel below the chart to save a named snapshot. See the <strong>Schedule Baselines</strong> section for details.</p>
             </Section>
 
             {/* RESOURCE CAPACITY */}
-            <Section id="capacity" title="👥 Resource Capacity Planning">
+            <Section id="capacity" title="Resource Capacity Planning">
               <p style={sc.p}>The <strong>Capacity</strong> page shows a colour-coded heatmap of how many hours each resource is allocated week-by-week compared to their working capacity. Navigate to <strong>Capacity</strong> in the sidebar.</p>
 
               <SubHeading>Reading the Heatmap</SubHeading>
@@ -835,7 +866,7 @@ export default function UserManual({ onClose }) {
                 'Set a From / To date range (defaults to the current week through 11 weeks ahead).',
                 'Optionally filter by Scope (Portfolio / Program / Project) to see only resources allocated within that scope.',
                 'Toggle between Weeks and Months view using the buttons in the top-right.',
-                'Click ↻ Load to refresh the heatmap.',
+                'Click Load to refresh the heatmap.',
               ]} />
 
               <SubHeading>Drilling Down</SubHeading>
@@ -867,7 +898,7 @@ const sc = {
   header:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '1.25rem 1.5rem', background: '#0A2B14', color: '#fff', flexShrink: 0 },
   headerTitle: { fontSize: '1.15rem', fontWeight: 800 },
   headerSub:   { fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginTop: '2px' },
-  closeBtn:    { background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: '1rem', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  closeBtn:    { background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   body:        { display: 'flex', flex: 1, overflow: 'hidden' },
   toc:         { width: '210px', flexShrink: 0, background: '#f9fafb', borderRight: '1px solid #e5e7eb', overflowY: 'auto', padding: '0.75rem 0' },
   tocTitle:    { fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', padding: '0.25rem 1rem 0.5rem' },
@@ -885,7 +916,7 @@ const sc = {
   warn:        { background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '0.6rem 0.9rem', fontSize: '0.84rem', color: '#92400e', marginTop: '0.75rem' },
   hierarchy:   { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '0.5rem 0 0.75rem' },
   hLevel:      { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.87rem', color: '#374151' },
-  hIcon:       { fontSize: '1rem', flexShrink: 0 },
+  hIcon:       { fontSize: 18, color: '#016D2D', flexShrink: 0 },
   formula:     { background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.6rem 1rem', fontFamily: 'monospace', fontSize: '0.86rem', color: '#1d1d1d', margin: '0.5rem 0' },
   code:        { background: '#f3f4f6', padding: '1px 5px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.82rem' },
 };

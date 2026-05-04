@@ -2,9 +2,17 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import PersonIcon from '@mui/icons-material/Person';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FolderIcon from '@mui/icons-material/Folder';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 
 const RISK_COLOR = {
-  'Critical Risk': { bg: '#fef2f2', border: '#fca5a5', badge: '#dc2626', text: '#991b1b' },
+  'Critical Risk': { bg: '#fef2f2', border: '#fca5a5', badge: '#f87171', text: '#991b1b' },
   'High Risk':     { bg: '#fff7ed', border: '#fdba74', badge: '#ea580c', text: '#9a3412' },
   'Medium Risk':   { bg: '#fefce8', border: '#fde047', badge: '#ca8a04', text: '#854d0e' },
   'Low Risk':      { bg: '#f0fdf4', border: '#86efac', badge: '#16a34a', text: '#166534' },
@@ -85,11 +93,15 @@ export default function RiskManagement() {
     else { setSortField(field); setSortDir(field === 'risk_rate' ? 'desc' : 'asc'); }
   };
 
-  const sortIcon = (field) => sortField === field ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const sortIcon = (field) => sortField === field
+    ? (sortDir === 'asc'
+      ? <ArrowUpwardIcon style={{ fontSize: 11, verticalAlign: 'middle', marginLeft: 2 }} />
+      : <ArrowDownwardIcon style={{ fontSize: 11, verticalAlign: 'middle', marginLeft: 2 }} />)
+    : null;
 
   return (
     <div>
-      <h1 style={styles.heading}>⚠️ Risk Management</h1>
+      <h1 style={styles.heading}><WarningAmberIcon style={{ fontSize: 22, verticalAlign: 'middle', marginRight: 6 }} />Risk Management</h1>
       <p style={styles.sub}>All risks across portfolios, programs, and projects.</p>
 
       {/* Summary chips */}
@@ -140,7 +152,7 @@ export default function RiskManagement() {
           }}
           title="Show only risks on tasks you created"
         >
-          👤 My Risks
+          <PersonIcon style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 4 }} />My Risks
         </button>
       </div>
 
@@ -148,7 +160,7 @@ export default function RiskManagement() {
       {loading && <div style={styles.loading}>Loading risks…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div style={styles.empty}>✅ No risks match the current filters.</div>
+        <div style={styles.empty}><CheckCircleIcon style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 5, color: '#16a34a' }} />No risks match the current filters.</div>
       )}
 
       {!loading && filtered.length > 0 && (
@@ -172,7 +184,7 @@ export default function RiskManagement() {
               {filtered.map(risk => {
                 const c = RISK_COLOR[risk.risk_status] || RISK_COLOR['Low Risk'];
                 return (
-                  <tr key={risk.id} style={styles.tbodyRow}>
+                  <tr key={risk.id} className="pm-row" style={styles.tbodyRow}>
                     {/* Risk level badge */}
                     <td style={styles.td}>
                       <span style={{ ...styles.levelBadge, background: c.badge, color: '#fff' }}>
@@ -207,7 +219,7 @@ export default function RiskManagement() {
                     {/* Project */}
                     <td style={styles.td}>
                       {risk.project_id
-                        ? <Link to={`/projects/${risk.project_id}`} style={styles.hierLink}>📁 {risk.project_name}</Link>
+                        ? <Link to={`/projects/${risk.project_id}`} style={styles.hierLink}><FolderIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{risk.project_name}</Link>
                         : <span style={styles.dimText}>—</span>
                       }
                     </td>
@@ -215,7 +227,7 @@ export default function RiskManagement() {
                     {/* Program */}
                     <td style={styles.td}>
                       {risk.program_id
-                        ? <Link to={`/programs/${risk.program_id}`} style={styles.hierLink}>📂 {risk.program_name}</Link>
+                        ? <Link to={`/programs/${risk.program_id}`} style={styles.hierLink}><FolderOpenIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{risk.program_name}</Link>
                         : <span style={styles.dimText}>—</span>
                       }
                     </td>
@@ -223,7 +235,7 @@ export default function RiskManagement() {
                     {/* Portfolio */}
                     <td style={styles.td}>
                       {risk.portfolio_id
-                        ? <Link to={`/portfolios/${risk.portfolio_id}`} style={{ ...styles.hierLink, color: '#0891b2' }}>🗂 {risk.portfolio_name}</Link>
+                        ? <Link to={`/portfolios/${risk.portfolio_id}`} style={{ ...styles.hierLink, color: '#0891b2' }}><FolderSpecialIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />{risk.portfolio_name}</Link>
                         : <span style={styles.dimText}>—</span>
                       }
                     </td>

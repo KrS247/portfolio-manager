@@ -20,7 +20,7 @@ function RiskPill({ rate }) {
   if (!rm) return <span style={{ color: '#d1d5db', fontSize: '0.78rem' }}>—</span>;
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: 20, padding: '2px 8px', fontSize: '0.74rem', fontWeight: 700 }}>
-      ⚠️ {rate} · {rm.label}
+      {rate} · {rm.label}
     </span>
   );
 }
@@ -29,8 +29,8 @@ function ViewToggle({ view, onChange }) {
   const base = { padding: '0.3rem 0.85rem', border: '1px solid #e5e7eb', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', transition: 'all 0.15s' };
   return (
     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-      <button style={{ ...base, borderRight: '1px solid #e5e7eb', borderRadius: 0, background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}>⊞ Cards</button>
-      <button style={{ ...base, borderRadius: 0, border: 'none', background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}>☰ Table</button>
+      <button style={{ ...base, borderRight: '1px solid #e5e7eb', borderRadius: 0, background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}>Cards</button>
+      <button style={{ ...base, borderRadius: 0, border: 'none', background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}>Table</button>
     </div>
   );
 }
@@ -132,7 +132,7 @@ export default function Portfolios() {
       {viewMode === 'card' ? (
         <div style={styles.grid}>
           {portfolios?.map(p => (
-            <div key={p.id} style={styles.card}>
+            <div key={p.id} className="pm-card" style={styles.card}>
               <div style={styles.cardHeader}>
                 <Link to={`/portfolios/${p.id}`} style={styles.cardTitle}>{p.name}</Link>
                 <StatusBadge status={p.status} />
@@ -140,8 +140,8 @@ export default function Portfolios() {
               {p.description && <p style={styles.cardDesc}>{p.description}</p>}
               <div style={styles.cardTags}><PriorityTag priority={p.priority ?? 5} /></div>
               <div style={styles.cardDates}>
-                {p.start_date && <span>📅 Start: {p.start_date}</span>}
-                {p.end_date   && <span>🏁 End: {p.end_date}</span>}
+                {p.start_date && <span>Start: {p.start_date}</span>}
+                {p.end_date   && <span>End: {p.end_date}</span>}
               </div>
               <div style={styles.cardMeta}>
                 <span>{p.program_count} programs</span>
@@ -170,7 +170,7 @@ export default function Portfolios() {
             </thead>
             <tbody>
               {portfolios?.map((p, i) => (
-                <tr key={p.id} style={{ ...styles.tr, background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                <tr key={p.id} className="pm-row" style={{ ...styles.tr, background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
                   <td style={styles.td}>
                     <Link to={`/portfolios/${p.id}`} style={styles.tableLink}>{p.name}</Link>
                     {p.description && <div style={styles.tableDesc}>{p.description}</div>}

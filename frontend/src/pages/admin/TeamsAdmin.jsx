@@ -71,7 +71,7 @@ export default function TeamsAdmin() {
               <tr><td colSpan={3} style={{ ...styles.td, color: '#9ca3af', textAlign: 'center' }}>No teams yet. Create one to get started.</td></tr>
             )}
             {teams?.map(t => (
-              <tr key={t.id} style={styles.tr}>
+              <tr key={t.id} className="pm-row" style={styles.tr}>
                 <td style={styles.td}><strong>{t.name}</strong></td>
                 <td style={styles.td}>{t.created_at?.slice(0, 10)}</td>
                 <td style={styles.td}>

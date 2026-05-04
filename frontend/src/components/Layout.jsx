@@ -5,6 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { clearPermissionsCache } from '../hooks/usePermissions';
 import client from '../api/client';
 import UserManual from './UserManual';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const NAV_ITEMS = [
   { slug: 'dashboard',          label: 'Dashboard',    path: '/' },
@@ -96,7 +97,7 @@ export default function Layout({ children }) {
                 style={styles.navSectionBtn}
               >
                 <span>Administration</span>
-                <span style={{ ...styles.chevron, transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                <ExpandMoreIcon style={{ ...styles.chevron, transform: adminOpen ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 18 }} />
               </button>
               {adminOpen && visibleAdmin.map(item => (
                 <Link key={item.path} to={item.path} style={{ ...styles.navItem, ...(isActive(item.path) ? styles.navActive : {}) }}>

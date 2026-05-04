@@ -61,7 +61,7 @@ export default function RolesAdmin() {
           </tr></thead>
           <tbody>
             {roles?.map(r => (
-              <tr key={r.id} style={styles.tr}>
+              <tr key={r.id} className="pm-row" style={styles.tr}>
                 <td style={styles.td}><strong>{r.name}</strong></td>
                 <td style={styles.td}>{r.description || '—'}</td>
                 <td style={styles.td}>{r.is_admin ? <span style={{ color: '#d97706', fontWeight: 700 }}>Yes</span> : 'No'}</td>

@@ -5,6 +5,10 @@ import { usePermissions } from '../hooks/usePermissions';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import PrioritySelect from '../components/PrioritySelect';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import GridViewIcon from '@mui/icons-material/GridView';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import LinkIcon from '@mui/icons-material/Link';
 
 function getRiskMeta(rate) {
   if (rate == null) return null;
@@ -19,7 +23,7 @@ function RiskPill({ rate }) {
   if (!rm) return <span style={{ color: '#d1d5db', fontSize: '0.78rem' }}>—</span>;
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: 20, padding: '2px 8px', fontSize: '0.74rem', fontWeight: 700 }}>
-      ⚠️ {rate} · {rm.label}
+      <WarningAmberIcon style={{ fontSize: 13 }} /> {rate} · {rm.label}
     </span>
   );
 }
@@ -47,8 +51,8 @@ function ViewToggle({ view, onChange }) {
   const base = { padding: '0.3rem 0.85rem', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' };
   return (
     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-      <button style={{ ...base, borderRight: '1px solid #e5e7eb', background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}>⊞ Cards</button>
-      <button style={{ ...base, background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}>☰ Table</button>
+      <button style={{ ...base, borderRight: '1px solid #e5e7eb', background: view === 'card' ? '#016D2D' : '#fff', color: view === 'card' ? '#fff' : '#6b7280' }} onClick={() => onChange('card')}><GridViewIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Cards</button>
+      <button style={{ ...base, background: view === 'table' ? '#016D2D' : '#fff', color: view === 'table' ? '#fff' : '#6b7280' }} onClick={() => onChange('table')}><TableRowsIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Table</button>
     </div>
   );
 }
@@ -116,7 +120,7 @@ function ProjectForm({ project, onSave, onCancel }) {
             <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af' }}>optional</span>
           </label>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', pointerEvents: 'none' }}>🔗</span>
+            <LinkIcon style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none', color: '#9ca3af' }} />
             <input
               style={{ ...styles.input, paddingLeft: '2rem', fontFamily: 'monospace', letterSpacing: '0.03em' }}
               value={form.clickup_id}
@@ -160,7 +164,7 @@ export default function Projects() {
       {viewMode === 'card' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {projects?.map(p => (
-            <div key={p.id} style={{ background: '#fff', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div key={p.id} className="pm-card" style={{ background: '#fff', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <Link to={`/projects/${p.id}`} style={{ fontWeight: 700, color: '#1d1d1d', textDecoration: 'none', fontSize: '1rem' }}>{p.name}</Link>
                 <StatusBadge status={p.status} />
@@ -191,7 +195,7 @@ export default function Projects() {
             </thead>
             <tbody>
               {projects?.map((p, i) => (
-                <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
+                <tr key={p.id} className="pm-row" style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
                   <td style={styles.td}>
                     <Link to={`/projects/${p.id}`} style={styles.tableLink}>{p.name}</Link>
                     {p.description && <div style={styles.tableDesc}>{p.description}</div>}

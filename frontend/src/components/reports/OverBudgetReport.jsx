@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../../api/client';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -64,7 +65,7 @@ export default function OverBudgetReport({ parentType, parentId }) {
 
       {overBudget.length === 0 ? (
         <div style={{ padding: '3rem', textAlign: 'center', background: '#f0fdf4', borderRadius: '12px', border: '2px solid #bbf7d0' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+          <div style={{ marginBottom: '0.5rem' }}><CheckCircleIcon style={{ fontSize: '2rem', color: '#16a34a' }} /></div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#16a34a' }}>All tasks are within budget!</div>
           <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.4rem' }}>No tasks have negative cost variance in this scope.</div>
         </div>

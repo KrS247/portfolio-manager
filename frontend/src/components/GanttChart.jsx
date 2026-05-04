@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const ROW_H  = 42;
@@ -208,6 +210,8 @@ export default function GanttChart({
   // Use preview items when a drag preview is active, otherwise use authoritative items
   const renderItems = previewItems ?? items;
 
+  const [hoveredRow, setHoveredRow] = useState(null);
+
   // Build a quick lookup for baseline dates
   const baselineMap = useMemo(() => {
     if (!baselineTasks) return {};
@@ -293,7 +297,7 @@ export default function GanttChart({
   if (!chart) {
     return (
       <div style={styles.empty}>
-        <span style={{ fontSize: '1.5rem' }}>📅</span>
+        <CalendarTodayIcon style={{ fontSize: '1.5rem', color: '#9ca3af' }} />
         <p>No items have dates yet. Add start or end dates to see the Gantt chart.</p>
       </div>
     );
@@ -326,22 +330,25 @@ export default function GanttChart({
           {flatRows.map(({ item, depth }, i) => (
             <div
               key={item.id}
+              onMouseEnter={() => setHoveredRow(i)}
+              onMouseLeave={() => setHoveredRow(null)}
               style={{
                 height: ROW_H,
                 display: 'flex', alignItems: 'center', gap: '6px',
                 paddingLeft: 14 + depth * 14,
                 paddingRight: 14,
-                background: criticalIds.has(item.id) ? CP_BG : (i % 2 === 0 ? '#fff' : '#fafafa'),
+                background: hoveredRow === i ? '#f0fdf4' : criticalIds.has(item.id) ? CP_BG : (i % 2 === 0 ? '#fff' : '#fafafa'),
                 borderBottom: '1px solid #f0f0f0',
                 borderLeft: depth > 0 ? '3px solid #d1fae5' : 'none',
                 cursor: canEdit ? 'pointer' : 'default',
                 overflow: 'hidden',
+                transition: 'background 0.12s',
               }}
               onClick={canEdit && onEdit ? () => onEdit(item) : undefined}
               title={canEdit ? `Edit: ${item[nameField]}` : item[nameField]}
             >
               {depth > 0 && (
-                <span style={{ color: '#9ca3af', fontSize: '0.7rem', flexShrink: 0 }}>↳</span>
+                <SubdirectoryArrowRightIcon style={{ color: '#9ca3af', fontSize: '0.9rem', flexShrink: 0 }} />
               )}
               <span style={{
                 width: 8, height: 8, borderRadius: depth > 0 ? '2px' : '50%', flexShrink: 0,
@@ -510,12 +517,16 @@ export default function GanttChart({
               const tooltip = tooltipParts.join('  |  ');
 
               return (
-                <div key={item.id} style={{
+                <div key={item.id}
+                  onMouseEnter={() => setHoveredRow(i)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  style={{
                   position: 'absolute',
                   top: HEAD_H + i * ROW_H, left: 0, right: 0, height: ROW_H,
-                  background: rowBg,
+                  background: hoveredRow === i ? '#f0fdf4' : rowBg,
                   borderBottom: '1px solid #f0f0f0',
                   borderLeft: isAffected ? '3px solid #f59e0b' : undefined,
+                  transition: 'background 0.12s',
                   zIndex: 2,
                 }}>
                   {/* ── Baseline bar (thin, behind main bar) ─────── */}

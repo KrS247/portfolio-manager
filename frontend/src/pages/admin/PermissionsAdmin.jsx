@@ -98,7 +98,7 @@ export default function PermissionsAdmin() {
           </thead>
           <tbody>
             {pages.map(page => (
-              <tr key={page.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <tr key={page.id} className="pm-row" style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ ...styles.td, fontWeight: 600 }}>
                   <div>{page.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontFamily: 'monospace', fontWeight: 400 }}>{page.slug}</div>

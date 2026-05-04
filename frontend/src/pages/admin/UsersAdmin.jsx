@@ -3,6 +3,7 @@ import { useApi } from '../../hooks/useApi';
 import client from '../../api/client';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
+import CloseIcon from '@mui/icons-material/Close';
 
 // ── New User Form ──────────────────────────────────────────────────────────────
 function NewUserForm({ roles, teams, companies, onCreated, onClose }) {
@@ -239,7 +240,7 @@ export default function UsersAdmin() {
             >
               {bulkAssigning ? 'Applying…' : 'Apply'}
             </button>
-            <button style={styles.bulkClearBtn} onClick={clearSelection}>✕ Clear</button>
+            <button style={styles.bulkClearBtn} onClick={clearSelection}><CloseIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />Clear</button>
           </div>
         </div>
       )}
@@ -275,7 +276,7 @@ export default function UsersAdmin() {
             {users?.map(u => {
               const isSelected = selected.has(u.id);
               return (
-                <tr key={u.id} style={{ ...styles.tr, background: isSelected ? '#f0fdf4' : undefined }}>
+                <tr key={u.id} className="pm-row" style={{ ...styles.tr, background: isSelected ? '#f0fdf4' : undefined }}>
                   <td style={{ ...styles.td, paddingRight: 0 }}>
                     <input
                       type="checkbox"

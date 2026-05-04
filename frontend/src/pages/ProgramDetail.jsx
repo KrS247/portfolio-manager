@@ -9,6 +9,12 @@ import PrioritySelect, { PriorityTag } from '../components/PrioritySelect';
 import ProgressBar from '../components/ProgressBar';
 import GanttChart from '../components/GanttChart';
 import EVMPanel from '../components/EVMPanel';
+import LinkIcon from '@mui/icons-material/Link';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import FlagIcon from '@mui/icons-material/Flag';
 
 function getRiskMeta(rate) {
   if (rate == null) return null;
@@ -82,7 +88,7 @@ function ProjectForm({ programId, project, onSave, onCancel }) {
             <span style={{ marginLeft: '0.4rem', fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af' }}>optional</span>
           </label>
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', pointerEvents: 'none' }}>🔗</span>
+            <LinkIcon style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1rem', pointerEvents: 'none', color: '#9ca3af' }} />
             <input
               style={{ ...styles.input, paddingLeft: '2rem', fontFamily: 'monospace', letterSpacing: '0.03em' }}
               value={form.clickup_id}
@@ -134,7 +140,7 @@ export default function ProgramDetail() {
           {getRiskMeta(data.avg_risk_rate) && (() => { const rm = getRiskMeta(data.avg_risk_rate); return (
             <div style={{ marginTop: '0.5rem' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: 700 }}>
-                ⚠️ Avg Risk: {data.avg_risk_rate} · {rm.label}
+                <WarningAmberIcon style={{ fontSize: 14, verticalAlign: 'middle' }} /> Avg Risk: {data.avg_risk_rate} · {rm.label}
               </span>
             </div>
           ); })()}
@@ -147,8 +153,8 @@ export default function ProgramDetail() {
           <h2 style={styles.sectionTitle}>Projects ({data.projects?.length || 0})</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={styles.viewToggle}>
-              <button style={{ ...styles.viewBtn, ...(projView === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setProjView('list')}>☰ List</button>
-              <button style={{ ...styles.viewBtn, ...(projView === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setProjView('gantt')}>📊 Gantt</button>
+              <button style={{ ...styles.viewBtn, ...(projView === 'list'  ? styles.viewBtnActive : {}) }} onClick={() => setProjView('list')}><FormatListBulletedIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />List</button>
+              <button style={{ ...styles.viewBtn, ...(projView === 'gantt' ? styles.viewBtnActive : {}) }} onClick={() => setProjView('gantt')}><BarChartIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }} />Gantt</button>
             </div>
             {canEdit('projects') && <button style={styles.addBtn} onClick={() => setShowForm(true)}>+ Add Project</button>}
           </div>
@@ -161,6 +167,7 @@ export default function ProgramDetail() {
             items={data.projects}
             nameField="name"
             endDateField="end_date"
+            timeUnit="month"
             canEdit={canEdit('projects')}
             onEdit={(proj) => setEditProj(proj)}
           />
@@ -169,7 +176,7 @@ export default function ProgramDetail() {
         {/* List (card grid) view */}
         <div style={{ ...styles.grid, display: projView === 'list' ? 'grid' : 'none' }}>
           {data.projects?.map(proj => (
-            <div key={proj.id} style={styles.card}>
+            <div key={proj.id} className="pm-card" style={styles.card}>
               <div style={styles.cardHeader}>
                 <Link to={`/projects/${proj.id}`} style={styles.cardTitle}>{proj.name}</Link>
                 <StatusBadge status={proj.status} />
@@ -177,8 +184,8 @@ export default function ProgramDetail() {
               {proj.description && <p style={styles.cardDesc}>{proj.description}</p>}
               <div style={styles.cardTags}><PriorityTag priority={proj.priority ?? 5} /></div>
               <div style={styles.cardDates}>
-                {proj.start_date && <span>📅 {proj.start_date}</span>}
-                {proj.end_date   && <span>🏁 {proj.end_date}</span>}
+                {proj.start_date && <span><CalendarTodayIcon style={{ fontSize: 12, verticalAlign: 'middle', marginRight: 2 }} />{proj.start_date}</span>}
+                {proj.end_date   && <span><FlagIcon style={{ fontSize: 12, verticalAlign: 'middle', marginRight: 2 }} />{proj.end_date}</span>}
               </div>
               <div style={styles.cardMeta}><span>{proj.task_count} tasks</span></div>
               {/* Per-project completion bar */}
@@ -190,7 +197,7 @@ export default function ProgramDetail() {
               </div>
               {getRiskMeta(proj.avg_risk_rate) && (() => { const rm = getRiskMeta(proj.avg_risk_rate); return (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, borderRadius: '20px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, marginTop: '4px' }}>
-                  ⚠️ {proj.avg_risk_rate} · {rm.label}
+                  <WarningAmberIcon style={{ fontSize: 12, verticalAlign: 'middle' }} /> {proj.avg_risk_rate} · {rm.label}
                 </span>
               ); })()}
               {canEdit('projects') && (

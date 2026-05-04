@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import client from '../../api/client';
+import CloseIcon from '@mui/icons-material/Close';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DEFAULT_WORK_DAYS = [1,2,3,4,5];   // Mon-Fri
@@ -309,7 +310,7 @@ export default function WorkingCalendarAdmin() {
                     style={styles.deleteBtn}
                     title="Delete holiday"
                   >
-                    ✕
+                    <CloseIcon style={{ fontSize: 14 }} />
                   </button>
                 </div>
               ))}
