@@ -5,7 +5,14 @@ NIXPACKS_PHP_VERSION = "8.4"
 cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
-cmds = ["php artisan config:cache", "php artisan route:cache", "php artisan view:cache"]
+# Cache config/routes/views AFTER migrations so route:cache picks up any new routes
+cmds = [
+    "php artisan config:cache",
+    "php artisan route:cache",
+    "php artisan view:cache",
+]
 
 [start]
-cmd = "php artisan serve --host=0.0.0.0 --port=$PORT"
+# Run migrations on every deploy (idempotent — safe to re-run).
+# The app then starts on the Railway-provided $PORT.
+cmd = "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"

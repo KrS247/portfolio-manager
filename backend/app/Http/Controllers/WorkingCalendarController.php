@@ -14,8 +14,10 @@ class WorkingCalendarController extends Controller
     /** GET /working-calendar */
     public function show()
     {
+        // TenantScope on WorkingCalendarSetting ensures we only touch this
+        // tenant's row.  firstOrCreate auto-sets company_id via BelongsToTenant.
         $setting  = WorkingCalendarSetting::firstOrCreate(
-            ['id' => 1],
+            [],
             ['work_days' => '1,2,3,4,5', 'hours_per_day' => 8.00, 'timezone' => 'UTC']
         );
         $holidays = PublicHoliday::orderBy('holiday_date')->get();
@@ -37,7 +39,8 @@ class WorkingCalendarController extends Controller
             'timezone'      => 'required|string|max:64',
         ]);
 
-        $setting = WorkingCalendarSetting::firstOrCreate(['id' => 1]);
+        // TenantScope scopes this to the current tenant automatically.
+        $setting = WorkingCalendarSetting::firstOrCreate([]);
         $setting->fill($data)->save();
 
         return response()->json(['message' => 'Working calendar updated.', 'setting' => $setting]);
@@ -64,6 +67,8 @@ class WorkingCalendarController extends Controller
         $holidayDate = $data[$dateField];
         $recurring   = (bool) ($data['recurring'] ?? false);
 
+        // TenantScope filters by company_id automatically; the unique key is
+        // holiday_date within the current tenant's scope.
         $holiday = PublicHoliday::updateOrCreate(
             ['holiday_date' => $holidayDate],
             ['name' => $data['name'], 'recurring' => $recurring]

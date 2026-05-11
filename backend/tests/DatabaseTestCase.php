@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\DB;
  * not in numbered migrations, so we build them here via raw SQL before every
  * test class that needs them.
  *
+ * Multi-tenancy: all user-data tables now include a company_id column so the
+ * TenantScope global scope does not break queries in test contexts.
+ *
  * Usage:
  *   class MyFeatureTest extends \Tests\DatabaseTestCase { … }
  */
@@ -81,12 +84,18 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // companies
+        // companies — includes tenant management columns for multi-tenancy tests
         DB::statement("
             CREATE TABLE IF NOT EXISTS companies (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                name       TEXT NOT NULL UNIQUE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                name          TEXT NOT NULL UNIQUE,
+                slug          TEXT UNIQUE,
+                plan          TEXT NOT NULL DEFAULT 'starter',
+                status        TEXT NOT NULL DEFAULT 'active',
+                trial_ends_at DATETIME,
+                max_users     INTEGER,
+                owner_email   TEXT,
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ");
 
@@ -142,10 +151,11 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // portfolios
+        // portfolios — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS portfolios (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id  INTEGER REFERENCES companies(id) ON DELETE CASCADE,
                 name        TEXT NOT NULL,
                 description TEXT,
                 status      TEXT NOT NULL DEFAULT 'active',
@@ -158,10 +168,11 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // programs
+        // programs — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS programs (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id   INTEGER REFERENCES companies(id) ON DELETE CASCADE,
                 portfolio_id INTEGER REFERENCES portfolios(id) ON DELETE CASCADE,
                 name         TEXT NOT NULL,
                 description  TEXT,
@@ -175,10 +186,11 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // projects
+        // projects — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS projects (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id  INTEGER REFERENCES companies(id) ON DELETE CASCADE,
                 program_id  INTEGER REFERENCES programs(id) ON DELETE CASCADE,
                 name        TEXT NOT NULL,
                 description TEXT,
@@ -193,47 +205,49 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // tasks
+        // tasks — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS tasks (
-                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-                title               TEXT NOT NULL,
-                description         TEXT,
-                priority            INTEGER DEFAULT 5,
-                sequence            INTEGER DEFAULT 0,
-                status              TEXT NOT NULL DEFAULT 'not_started',
-                due_date            TEXT,
-                start_date          TEXT,
-                assigned_to         INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                parent_type         TEXT,
-                parent_id           INTEGER,
-                percent_complete    INTEGER DEFAULT 0,
-                is_milestone        INTEGER DEFAULT 0,
-                parent_task_id      INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
-                constraint_type     TEXT,
-                constraint_date     TEXT,
-                schedule_mode       TEXT DEFAULT 'auto',
-                early_start         TEXT,
-                early_finish        TEXT,
-                late_start          TEXT,
-                late_finish         TEXT,
-                float_days          INTEGER DEFAULT 0,
-                duration_days       INTEGER,
-                notes               TEXT,
-                created_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                recurrence_type     TEXT,
-                recurrence_interval INTEGER DEFAULT 1,
-                recurrence_end_date TEXT,
+                id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id           INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+                title                TEXT NOT NULL,
+                description          TEXT,
+                priority             INTEGER DEFAULT 5,
+                sequence             INTEGER DEFAULT 0,
+                status               TEXT NOT NULL DEFAULT 'not_started',
+                due_date             TEXT,
+                start_date           TEXT,
+                assigned_to          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                parent_type          TEXT,
+                parent_id            INTEGER,
+                percent_complete     INTEGER DEFAULT 0,
+                is_milestone         INTEGER DEFAULT 0,
+                parent_task_id       INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+                constraint_type      TEXT,
+                constraint_date      TEXT,
+                schedule_mode        TEXT DEFAULT 'auto',
+                early_start          TEXT,
+                early_finish         TEXT,
+                late_start           TEXT,
+                late_finish          TEXT,
+                float_days           INTEGER DEFAULT 0,
+                duration_days        INTEGER,
+                notes                TEXT,
+                created_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                recurrence_type      TEXT,
+                recurrence_interval  INTEGER DEFAULT 1,
+                recurrence_end_date  TEXT,
                 recurrence_parent_id INTEGER,
-                created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at           DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at           DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ");
 
-        // risks
+        // risks — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS risks (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id      INTEGER REFERENCES companies(id) ON DELETE CASCADE,
                 task_id         INTEGER UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
                 name            TEXT,
                 description     TEXT,
@@ -273,23 +287,25 @@ abstract class DatabaseTestCase extends BaseTestCase
             )
         ");
 
-        // working_calendar_settings
+        // working_calendar_settings — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS working_calendar_settings (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                work_days    TEXT DEFAULT '[1,2,3,4,5]',
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id    INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+                work_days     TEXT DEFAULT '1,2,3,4,5',
                 hours_per_day REAL DEFAULT 8,
-                timezone     TEXT DEFAULT 'UTC',
-                created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+                timezone      TEXT DEFAULT 'UTC',
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ");
 
-        // public_holidays
+        // public_holidays — includes company_id for multi-tenancy
         DB::statement("
             CREATE TABLE IF NOT EXISTS public_holidays (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                holiday_date TEXT NOT NULL UNIQUE,
+                company_id   INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+                holiday_date TEXT NOT NULL,
                 name         TEXT NOT NULL,
                 recurring    INTEGER DEFAULT 0,
                 created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -306,6 +322,37 @@ abstract class DatabaseTestCase extends BaseTestCase
                 hours_per_day REAL,
                 created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
+        // schedule_baselines — includes company_id for multi-tenancy
+        DB::statement("
+            CREATE TABLE IF NOT EXISTS schedule_baselines (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id  INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+                name        TEXT NOT NULL,
+                parent_type TEXT,
+                parent_id   INTEGER,
+                created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+
+        // schedule_baseline_tasks
+        DB::statement("
+            CREATE TABLE IF NOT EXISTS schedule_baseline_tasks (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                baseline_id      INTEGER NOT NULL REFERENCES schedule_baselines(id) ON DELETE CASCADE,
+                task_id          INTEGER NOT NULL,
+                title            TEXT NOT NULL,
+                status           TEXT,
+                start_date       TEXT,
+                due_date         TEXT,
+                duration_days    INTEGER,
+                percent_complete INTEGER DEFAULT 0,
+                created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ");
 
@@ -335,6 +382,15 @@ abstract class DatabaseTestCase extends BaseTestCase
 
     protected function seedBaseData(): void
     {
+        // Default company (tenant) — all test users belong to this
+        DB::table('companies')->insert([
+            'name'   => 'Test Company',
+            'slug'   => 'test',
+            'plan'   => 'starter',
+            'status' => 'active',
+        ]);
+        $companyId = DB::table('companies')->where('slug', 'test')->value('id');
+
         // Roles
         DB::table('roles')->insert([
             ['name' => 'admin',          'description' => 'Administrator', 'is_admin' => 1],
@@ -345,7 +401,8 @@ abstract class DatabaseTestCase extends BaseTestCase
         // Pages that match the permission slugs used in middleware
         $pages = [
             'dashboard','portfolios','programs','projects','tasks',
-            'reports','capacity','admin.users','admin.roles',
+            'reports','capacity','risks','calendar',
+            'admin.users','admin.roles',
             'admin.permissions','admin.dashboard','admin.teams',
             'admin.company','admin.companies',
         ];
@@ -364,8 +421,9 @@ abstract class DatabaseTestCase extends BaseTestCase
         }
 
         // Grant project_manager role edit access to non-admin pages
-        $pmRoleId = DB::table('roles')->where('name', 'project_manager')->value('id');
-        $pmEditSlugs = ['dashboard', 'portfolios', 'programs', 'projects', 'tasks', 'reports', 'capacity'];
+        $pmRoleId    = DB::table('roles')->where('name', 'project_manager')->value('id');
+        $pmEditSlugs = ['dashboard', 'portfolios', 'programs', 'projects', 'tasks',
+                        'reports', 'capacity', 'risks', 'calendar'];
         foreach (DB::table('pages')->get() as $page) {
             DB::table('page_permissions')->insert([
                 'role_id'      => $pmRoleId,
@@ -373,7 +431,13 @@ abstract class DatabaseTestCase extends BaseTestCase
                 'access_level' => in_array($page->slug, $pmEditSlugs) ? 'edit' : 'none',
             ]);
         }
+
+        // Expose companyId to subclasses that need to seed tenant-specific data
+        $this->defaultCompanyId = $companyId;
     }
+
+    /** ID of the default test company, available after seedBaseData(). */
+    protected int $defaultCompanyId = 1;
 
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers
@@ -382,6 +446,7 @@ abstract class DatabaseTestCase extends BaseTestCase
     /**
      * Create a user row directly in the DB and return the model.
      * The UserFactory definition doesn't match the actual schema, so we insert raw.
+     * Users are automatically assigned to the default test company.
      */
     protected function createUser(array $overrides = []): \App\Models\User
     {
@@ -396,6 +461,7 @@ abstract class DatabaseTestCase extends BaseTestCase
             'email'         => 'test_' . uniqid() . '@example.com',
             'password_hash' => password_hash('Password1!', PASSWORD_BCRYPT),
             'role_id'       => $roleId,
+            'company_id'    => $this->defaultCompanyId,
             // Default migration requires name / password to be non-null in SQLite
             // (the nullable migration only runs on pgsql/mysql).
             'name'          => $username,

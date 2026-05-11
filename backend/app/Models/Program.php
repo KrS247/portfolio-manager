@@ -1,10 +1,13 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 
 class Program extends Model {
+    use BelongsToTenant;
+
     protected $table = 'programs';
-    protected $fillable = ['portfolio_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id'];
+    protected $fillable = ['company_id', 'portfolio_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id'];
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 

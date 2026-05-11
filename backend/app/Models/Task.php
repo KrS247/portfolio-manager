@@ -1,10 +1,14 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 
 class Task extends Model {
+    use BelongsToTenant;
+
     protected $table = 'tasks';
     protected $fillable = [
+        'company_id',
         'title', 'description', 'notes', 'priority', 'sequence', 'status', 'percent_complete',
         'start_date', 'due_date', 'is_milestone', 'assigned_to', 'parent_type', 'parent_id', 'parent_task_id',
         'constraint_type', 'constraint_date', 'schedule_mode',
