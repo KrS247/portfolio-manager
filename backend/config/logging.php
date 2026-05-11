@@ -69,7 +69,8 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            // SOC 2 CC7.2 / ISO 27001 A.8.15: retain logs for 365 days minimum
+            'days' => env('LOG_DAILY_DAYS', 365),
             'replace_placeholders' => true,
         ],
 

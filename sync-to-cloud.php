@@ -52,8 +52,12 @@ function curlGet(string $url, string $key): array
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => ["apikey: $key", "Authorization: Bearer $key"],
         CURLOPT_TIMEOUT        => 10,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false,
+        // SSL verification MUST be enabled. Disabling it allows MITM attacks that
+        // can intercept the full database dump + Supabase credentials in transit.
+        // Fix for audit finding H-4. If a corporate proxy CA is needed, set:
+        //   CURLOPT_CAINFO => '/path/to/corporate-ca-bundle.pem'
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
     ]);
     $body = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -113,8 +117,8 @@ function supabaseUpsert(string $baseUrl, string $key, string $table, array $rows
             ],
             CURLOPT_POSTFIELDS     => json_encode($batch),
             CURLOPT_TIMEOUT        => 30,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
         $response = curl_exec($ch);

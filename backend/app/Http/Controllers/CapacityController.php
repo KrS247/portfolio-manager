@@ -140,7 +140,12 @@ class CapacityController extends Controller
         }
 
         // ── Build response ──────────────────────────────────────────────────
-        $result = array_values(array_map(function ($u) use ($weekCapacities) {
+        // Fix for audit finding M-8: hourly_rate is salary data and must only be
+        // visible to admin users. Non-admins see utilisation numbers only.
+        $authUser     = $request->attributes->get('auth_user');
+        $showRate     = $authUser && (bool) $authUser->role?->is_admin;
+
+        $result = array_values(array_map(function ($u) use ($weekCapacities, $showRate) {
             $weekData = [];
             foreach ($u['weeks'] as $ws => $data) {
                 $cap   = $weekCapacities[$ws] ?? 40;
@@ -152,12 +157,15 @@ class CapacityController extends Controller
                     'tasks'       => $data['tasks'],
                 ];
             }
-            return [
-                'user_id'     => $u['user_id'],
-                'user_name'   => $u['user_name'],
-                'hourly_rate' => $u['hourly_rate'],
-                'weeks'       => $weekData,
+            $row = [
+                'user_id'   => $u['user_id'],
+                'user_name' => $u['user_name'],
+                'weeks'     => $weekData,
             ];
+            if ($showRate) {
+                $row['hourly_rate'] = $u['hourly_rate'];
+            }
+            return $row;
         }, $users));
 
         usort($result, fn($a, $b) => strcmp($a['user_name'], $b['user_name']));

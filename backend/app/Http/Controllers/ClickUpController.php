@@ -47,8 +47,11 @@ class ClickUpController extends Controller
      */
     private function mcpPost(string $token, ?string $sessionId, array $payload): array
     {
-        $response = Http::withoutVerifying()      // allow corporate SSL intercept
-            ->withHeaders($this->mcpHeaders($token, $sessionId))
+        // Fix for audit finding M-6: removed withoutVerifying(). SSL certificate
+        // verification MUST be enabled to prevent MITM attacks that would expose
+        // the ClickUp bearer token and all workspace data in transit.
+        // If a corporate proxy is required, configure CURLOPT_CAINFO instead.
+        $response = Http::withHeaders($this->mcpHeaders($token, $sessionId))
             ->timeout(20)
             ->post(self::MCP_URL, $payload);
 
@@ -140,7 +143,7 @@ class ClickUpController extends Controller
 
     public function task(Request $request, string $id)
     {
-        $token = env('CLICKUP_MCP_TOKEN');
+        $token = config('services.clickup.token');
 
         if (!$token) {
             return response()->json([
@@ -195,8 +198,10 @@ class ClickUpController extends Controller
                 ], 401);
             }
 
-            Log::error('ClickUp MCP error: ' . $e->getMessage());
-            return response()->json(['error' => ['code' => 'MCP_ERROR', 'message' => $e->getMessage()]], 502);
+            // Fix for audit finding M-12: log internally but never return raw
+            // exception messages (may include internal hostnames, HTTP codes, etc.)
+            Log::error('ClickUpController: MCP communication error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => ['code' => 'MCP_ERROR', 'message' => 'ClickUp service unavailable. Please try again later.']], 502);
         }
     }
 }

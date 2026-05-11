@@ -16,7 +16,11 @@ export default function CompanySetupAdmin() {
     client.get('/company-settings')
       .then(res => {
         setCompanyName(res.data.company_name || '');
-        setLogoUrl(res.data.logo_url || null);
+        // Build the logo URL relative to the API base rather than using the
+        // server-provided logo_url (which bakes in APP_URL / localhost).
+        setLogoUrl(res.data.has_logo
+          ? `${client.defaults.baseURL}/logo?v=${Date.now()}`
+          : null);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -55,7 +59,10 @@ export default function CompanySetupAdmin() {
       const res = await client.post('/company-settings', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setLogoUrl(res.data.logo_url);
+      // Same pattern as the initial load — construct relative to API base.
+      setLogoUrl(res.data.has_logo
+        ? `${client.defaults.baseURL}/logo?v=${Date.now()}`
+        : null);
       setLogoFile(null);
       setPreview(null);
       if (fileRef.current) fileRef.current.value = '';

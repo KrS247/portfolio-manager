@@ -10,6 +10,7 @@ class Task extends Model {
         'constraint_type', 'constraint_date', 'schedule_mode',
         'early_start', 'early_finish', 'late_start', 'late_finish', 'float_days', 'duration_days',
         'created_by',
+        'recurrence_type', 'recurrence_interval', 'recurrence_end_date', 'recurrence_parent_id',
     ];
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';

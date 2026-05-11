@@ -26,9 +26,21 @@ class EVMController extends Controller
         $parentType = $request->parent_type;
         $parentId   = (int) $request->parent_id;
 
+        if (!$parentType || !$parentId) {
+            return response()->json(['error' => 'parent_type and parent_id are required'], 422);
+        }
+
+        // Fix for audit finding M-11: scope task queries to PM-owned tasks
+        $authUser = $request->attributes->get('auth_user');
+        $isPM = $authUser
+            && $authUser->role?->name === 'project_manager'
+            && !$authUser->role?->is_admin;
+
+        $ownerId = $isPM ? $authUser->id : null;
+
         // Load tasks for the requested scope
         if ($parentType && $parentId) {
-            $tasks = $this->loadTasks($parentType, $parentId);
+            $tasks = $this->loadTasks($parentType, $parentId, $ownerId);
         } else {
             return response()->json(['error' => 'parent_type and parent_id are required'], 422);
         }
@@ -72,47 +84,57 @@ class EVMController extends Controller
     }
 
     // ── Load all tasks in scope (recursively through hierarchy) ─────────────
-    private function loadTasks(string $parentType, int $parentId)
+    //
+    // $ownerId — when non-null, only tasks created by this user are returned
+    // (project manager row-level isolation, M-11 fix).
+    private function loadTasks(string $parentType, int $parentId, ?int $ownerId = null)
     {
-        // Direct tasks
-        $direct = Task::with(['resources.user'])
-            ->where('parent_type', $parentType)
-            ->where('parent_id', $parentId)
-            ->get();
+        $applyOwner = function ($query) use ($ownerId) {
+            if ($ownerId !== null) {
+                $query->where('created_by', $ownerId);
+            }
+            return $query;
+        };
 
         if ($parentType === 'portfolio') {
             // Portfolio → programs → projects → tasks
             $programIds = \App\Models\Program::where('portfolio_id', $parentId)->pluck('id');
             $projectIds = \App\Models\Project::whereIn('program_id', $programIds)->pluck('id');
-            $tasks = Task::with(['resources.user'])
-                ->where(function ($q) use ($programIds, $projectIds, $parentId) {
-                    $q->where(function ($sq) use ($parentId) {
-                        $sq->where('parent_type', 'portfolio')->where('parent_id', $parentId);
-                    })->orWhere(function ($sq) use ($programIds) {
-                        $sq->where('parent_type', 'program')->whereIn('parent_id', $programIds);
-                    })->orWhere(function ($sq) use ($projectIds) {
-                        $sq->where('parent_type', 'project')->whereIn('parent_id', $projectIds);
-                    });
-                })->get();
-            return $tasks;
+            return $applyOwner(
+                Task::with(['resources.user'])
+                    ->where(function ($q) use ($programIds, $projectIds, $parentId) {
+                        $q->where(function ($sq) use ($parentId) {
+                            $sq->where('parent_type', 'portfolio')->where('parent_id', $parentId);
+                        })->orWhere(function ($sq) use ($programIds) {
+                            $sq->where('parent_type', 'program')->whereIn('parent_id', $programIds);
+                        })->orWhere(function ($sq) use ($projectIds) {
+                            $sq->where('parent_type', 'project')->whereIn('parent_id', $projectIds);
+                        });
+                    })
+            )->get();
         }
 
         if ($parentType === 'program') {
             // Program → projects → tasks
             $projectIds = \App\Models\Project::where('program_id', $parentId)->pluck('id');
-            $tasks = Task::with(['resources.user'])
-                ->where(function ($q) use ($projectIds, $parentId) {
-                    $q->where(function ($sq) use ($parentId) {
-                        $sq->where('parent_type', 'program')->where('parent_id', $parentId);
-                    })->orWhere(function ($sq) use ($projectIds) {
-                        $sq->where('parent_type', 'project')->whereIn('parent_id', $projectIds);
-                    });
-                })->get();
-            return $tasks;
+            return $applyOwner(
+                Task::with(['resources.user'])
+                    ->where(function ($q) use ($projectIds, $parentId) {
+                        $q->where(function ($sq) use ($parentId) {
+                            $sq->where('parent_type', 'program')->where('parent_id', $parentId);
+                        })->orWhere(function ($sq) use ($projectIds) {
+                            $sq->where('parent_type', 'project')->whereIn('parent_id', $projectIds);
+                        });
+                    })
+            )->get();
         }
 
         // Project scope: direct tasks only
-        return $direct;
+        return $applyOwner(
+            Task::with(['resources.user'])
+                ->where('parent_type', $parentType)
+                ->where('parent_id', $parentId)
+        )->get();
     }
 
     // ── Compute EVM metrics for a single task ────────────────────────────────

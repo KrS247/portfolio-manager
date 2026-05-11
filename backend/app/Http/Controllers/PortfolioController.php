@@ -13,62 +13,93 @@ class PortfolioController extends Controller {
         if ($this->isPM($request)) {
             $query->where('owner_id', $request->attributes->get('auth_user')->id);
         }
-        $portfolios = $query->get()->map(function($p) {
-            $programIds = Program::where('portfolio_id', $p->id)->pluck('id');
-            $projectIds = \App\Models\Project::whereIn('program_id', $programIds)->pluck('id');
+        $portfolios = $query->get();
 
-            $program_count = $programIds->count();
-            $project_count = $projectIds->count();
+        // ── Batch-load all related data to avoid N+1 queries ─────────────────
+        $portfolioIds = $portfolios->pluck('id');
 
-            $active_task_count = Task::where('parent_type', 'project')
-                ->whereIn('parent_id', $projectIds)
-                ->where('status', '!=', 'completed')
-                ->count();
-            $active_task_count += Task::where('parent_type', 'program')
-                ->whereIn('parent_id', $programIds)
-                ->where('status', '!=', 'completed')
-                ->count();
-            $active_task_count += Task::where('parent_type', 'portfolio')
-                ->where('parent_id', $p->id)
-                ->where('status', '!=', 'completed')
-                ->count();
+        // 1 query: all programs for these portfolios
+        $allPrograms = Program::whereIn('portfolio_id', $portfolioIds)->get(['id', 'portfolio_id']);
+        $allProgramIds = $allPrograms->pluck('id');
 
-            // Completion: avg of programs
-            $percent_complete = 0;
-            if ($programIds->count() > 0) {
-                $percent_complete = DB::table('projects')
-                    ->join('tasks', function($j) {
-                        $j->on('tasks.parent_id', '=', 'projects.id')
-                          ->where('tasks.parent_type', '=', 'project');
-                    })
-                    ->whereIn('projects.program_id', $programIds)
-                    ->avg('tasks.percent_complete') ?? 0;
-            }
+        // 1 query: all projects for these programs
+        $allProjects = \App\Models\Project::whereIn('program_id', $allProgramIds)->get(['id', 'program_id']);
+        $allProjectIds = $allProjects->pluck('id');
 
-            $avg_risk_rate = DB::table('risks')
-                ->join('tasks', 'risks.task_id', '=', 'tasks.id')
-                ->where(function($q) use ($p, $programIds, $projectIds) {
-                    $q->where(function($q2) use ($p) {
-                        $q2->where('tasks.parent_type', 'portfolio')->where('tasks.parent_id', $p->id);
-                    })->orWhere(function($q2) use ($programIds) {
-                        $q2->where('tasks.parent_type', 'program')->whereIn('tasks.parent_id', $programIds);
-                    })->orWhere(function($q2) use ($projectIds) {
-                        $q2->where('tasks.parent_type', 'project')->whereIn('tasks.parent_id', $projectIds);
-                    });
-                })
-                ->avg('risks.risk_rate') ?? 0;
+        // Precompute lookup maps
+        $programsByPortfolio = $allPrograms->groupBy('portfolio_id')
+            ->map(fn($g) => $g->pluck('id'));
+
+        $projectsByProgram = $allProjects->groupBy('program_id')
+            ->map(fn($g) => $g->pluck('id'));
+
+        $projectsByPortfolio = $portfolios->mapWithKeys(function ($p) use ($programsByPortfolio, $projectsByProgram) {
+            $progIds = $programsByPortfolio[$p->id] ?? collect([]);
+            $projIds = $progIds->flatMap(fn($id) => $projectsByProgram[$id] ?? collect([]));
+            return [$p->id => $projIds];
+        });
+
+        // 1 query: count active tasks grouped by parent type + parent_id
+        $rawTaskCounts = Task::where('status', '!=', 'completed')
+            ->selectRaw('parent_type, parent_id, COUNT(*) as cnt')
+            ->groupBy('parent_type', 'parent_id')
+            ->get();
+        $taskCountsByType = $rawTaskCounts->groupBy('parent_type')
+            ->map(fn($g) => $g->pluck('cnt', 'parent_id')->toArray());
+
+        // 1 query: avg percent_complete per portfolio via join
+        $pctByPortfolio = DB::table('projects')
+            ->join('tasks', function ($j) {
+                $j->on('tasks.parent_id', '=', 'projects.id')
+                  ->where('tasks.parent_type', '=', 'project');
+            })
+            ->join('programs', 'programs.id', '=', 'projects.program_id')
+            ->whereIn('programs.portfolio_id', $portfolioIds)
+            ->selectRaw('programs.portfolio_id, AVG(tasks.percent_complete) as pct')
+            ->groupBy('programs.portfolio_id')
+            ->pluck('pct', 'portfolio_id');
+
+        // 1 query: avg risk rate per portfolio via join
+        $riskByPortfolio = DB::table('risks')
+            ->join('tasks', 'risks.task_id', '=', 'tasks.id')
+            ->join('projects', function ($j) {
+                $j->on('tasks.parent_id', '=', 'projects.id')
+                  ->where('tasks.parent_type', '=', 'project');
+            })
+            ->join('programs', 'programs.id', '=', 'projects.program_id')
+            ->whereIn('programs.portfolio_id', $portfolioIds)
+            ->selectRaw('programs.portfolio_id, AVG(risks.risk_rate) as avg_risk')
+            ->groupBy('programs.portfolio_id')
+            ->pluck('avg_risk', 'portfolio_id');
+        // ─────────────────────────────────────────────────────────────────────
+
+        $result = $portfolios->map(function ($p) use (
+            $programsByPortfolio, $projectsByPortfolio,
+            $taskCountsByType, $pctByPortfolio, $riskByPortfolio
+        ) {
+            $progIds = $programsByPortfolio[$p->id] ?? collect([]);
+            $projIds = $projectsByPortfolio[$p->id] ?? collect([]);
+
+            $projectCounts  = $taskCountsByType['project']   ?? [];
+            $programCounts  = $taskCountsByType['program']   ?? [];
+            $portfolioCounts= $taskCountsByType['portfolio'] ?? [];
+
+            $active_task_count =
+                $projIds->sum(fn($id) => $projectCounts[$id] ?? 0)
+                + $progIds->sum(fn($id) => $programCounts[$id] ?? 0)
+                + ($portfolioCounts[$p->id] ?? 0);
 
             return array_merge($p->toArray(), [
-                'program_count' => $program_count,
-                'project_count' => $project_count,
+                'program_count'     => $progIds->count(),
+                'project_count'     => $projIds->count(),
                 'active_task_count' => $active_task_count,
-                'percent_complete' => round($percent_complete, 1),
-                'avg_risk_rate' => round($avg_risk_rate, 1),
-                'owner_name' => $p->owner?->username,
+                'percent_complete'  => round($pctByPortfolio[$p->id] ?? 0, 1),
+                'avg_risk_rate'     => round($riskByPortfolio[$p->id] ?? 0, 1),
+                'owner_name'        => $p->owner?->username,
             ]);
         });
 
-        return response()->json($portfolios);
+        return response()->json($result);
     }
 
     public function show(Request $request, $id) {

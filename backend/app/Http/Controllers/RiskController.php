@@ -2,7 +2,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use App\Models\Risk;
+use App\Models\Task;
+use App\Models\ActivityLog;
 
 class RiskController extends Controller {
     private function getRiskStatus($rate) {
@@ -68,24 +71,60 @@ class RiskController extends Controller {
 
     public function store(Request $request) {
         $data = $request->validate([
-            'task_id' => 'required|integer',
-            'name' => 'nullable|string',
-            'description' => 'nullable|string',
-            'probability' => 'required|integer|between:1,5',
-            'impact' => 'required|integer|between:1,5',
+            'task_id'         => 'required|integer|exists:tasks,id',
+            'name'            => 'nullable|string|max:255',
+            'description'     => 'nullable|string',
+            'probability'     => 'required|integer|between:1,5',
+            'impact'          => 'required|integer|between:1,5',
             'mitigation_plan' => 'nullable|string',
-            'status' => 'nullable|in:open,active,mitigated,closed',
+            'status'          => 'nullable|in:open,active,mitigated,closed',
         ]);
 
-        $data['risk_rate'] = $data['probability'] * $data['impact'];
+        // PM ownership check: PMs may only add risks to their own tasks
+        $authUser = $request->attributes->get('auth_user');
+        $isPM = $authUser && $authUser->role?->name === 'project_manager' && !$authUser->role?->is_admin;
+        if ($isPM) {
+            $task = Task::find($data['task_id']);
+            if (!$task || (int)$task->created_by !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only add risks to your own tasks'], 403);
+            }
+        }
+
+        $data['risk_rate']   = $data['probability'] * $data['impact'];
         $data['risk_status'] = $this->getRiskStatus($data['risk_rate']);
 
         $risk = Risk::create($data);
+
+        ActivityLog::record('task', $data['task_id'], 'risk_added',
+            ($authUser?->username ?? 'System') . " added risk \"{$risk->name}\" (rate: {$risk->risk_rate})",
+            $authUser?->id
+        );
+
         return response()->json($risk, 201);
     }
 
     public function update(Request $request, $id) {
         $risk = Risk::findOrFail($id);
+
+        // PM ownership check: PMs may only update risks on their own tasks
+        $authUser = $request->attributes->get('auth_user');
+        $isPM = $authUser && $authUser->role?->name === 'project_manager' && !$authUser->role?->is_admin;
+        if ($isPM) {
+            $task = Task::find($risk->task_id);
+            if (!$task || (int)$task->created_by !== (int)$authUser->id) {
+                return response()->json(['error' => 'You can only edit risks on your own tasks'], 403);
+            }
+        }
+
+        $request->validate([
+            'name'            => 'sometimes|nullable|string|max:255',
+            'description'     => 'sometimes|nullable|string',
+            'probability'     => 'sometimes|integer|between:1,5',
+            'impact'          => 'sometimes|integer|between:1,5',
+            'mitigation_plan' => 'sometimes|nullable|string',
+            'status'          => 'sometimes|nullable|in:open,active,mitigated,closed',
+        ]);
+
         $updateData = $request->only(['name', 'description', 'probability', 'impact', 'mitigation_plan', 'status']);
 
         if (isset($updateData['probability']) && isset($updateData['impact'])) {
@@ -100,6 +139,12 @@ class RiskController extends Controller {
         }
 
         $risk->update($updateData);
+
+        ActivityLog::record('task', $risk->task_id, 'risk_updated',
+            ($authUser?->username ?? 'System') . " updated risk \"{$risk->name}\" (rate: {$risk->risk_rate})",
+            $authUser?->id
+        );
+
         return response()->json($risk);
     }
 }

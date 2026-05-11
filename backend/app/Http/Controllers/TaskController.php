@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\TaskResource;
 use App\Models\User;
+use App\Models\ActivityLog;
 use App\Services\SchedulingEngine;
 use Illuminate\Support\Facades\DB;
 
@@ -109,7 +110,7 @@ class TaskController extends Controller {
             'description'     => 'nullable|string',
             'notes'           => 'nullable|string',
             'priority'        => 'nullable|integer|between:1,10',
-            'status'          => 'nullable|in:open,in_progress,completed,cancelled',
+            'status'          => 'nullable|in:not_started,open,in_progress,completed,cancelled',
             'percent_complete'=> 'nullable|integer|between:0,100',
             'start_date'      => 'nullable|date',
             'due_date'        => 'nullable|date',
@@ -132,6 +133,12 @@ class TaskController extends Controller {
         }
 
         $task = Task::create($data);
+
+        ActivityLog::record('task', $task->id, 'created',
+            ($authUser?->username ?? 'System') . " created task \"{$task->title}\"",
+            $authUser?->id
+        );
+
         return response()->json($task, 201);
     }
 
@@ -146,21 +153,62 @@ class TaskController extends Controller {
             }
         }
 
+        // Fix for audit finding H-6: validate all mutable fields, not just scheduling
+        // fields. Without this, parent_type/parent_id/recurrence_type accepted
+        // arbitrary values that could break downstream queries and EVM calculations.
         $request->validate([
-            'constraint_type' => 'nullable|in:ASAP,ALAP,MSO,MFO,SNET,FNLT',
-            'constraint_date' => 'nullable|date',
-            'schedule_mode'   => 'nullable|in:auto,manual',
+            'title'               => 'sometimes|string|max:500',
+            'description'         => 'nullable|string',
+            'notes'               => 'nullable|string',
+            'priority'            => 'nullable|integer|between:1,10',
+            'status'              => 'nullable|in:not_started,open,in_progress,completed,cancelled',
+            'percent_complete'    => 'nullable|integer|between:0,100',
+            'start_date'          => 'nullable|date',
+            'due_date'            => 'nullable|date',
+            'is_milestone'        => 'nullable|boolean',
+            'assigned_to'         => 'nullable|integer|exists:users,id',
+            'parent_type'         => 'sometimes|in:portfolio,program,project',
+            'parent_id'           => 'sometimes|integer',
+            'parent_task_id'      => 'nullable|integer|exists:tasks,id',
+            'constraint_type'     => 'nullable|in:ASAP,ALAP,MSO,MFO,SNET,FNLT',
+            'constraint_date'     => 'nullable|date',
+            'schedule_mode'       => 'nullable|in:auto,manual',
+            'recurrence_type'     => 'nullable|in:daily,weekly,monthly,yearly',
+            'recurrence_interval' => 'nullable|integer|min:1|max:365',
+            'recurrence_end_date' => 'nullable|date',
         ]);
 
-        $oldStart = $task->start_date;
-        $oldDue   = $task->due_date;
+        $oldStart  = $task->start_date;
+        $oldDue    = $task->due_date;
+        $oldStatus = $task->status;
+        $before    = $task->only(['title','status','percent_complete','start_date','due_date','assigned_to','priority']);
 
         $task->update($request->only([
             'title', 'description', 'notes', 'priority', 'status', 'percent_complete',
             'start_date', 'due_date', 'is_milestone', 'assigned_to',
             'parent_type', 'parent_id', 'parent_task_id',
             'constraint_type', 'constraint_date', 'schedule_mode',
+            'recurrence_type', 'recurrence_interval', 'recurrence_end_date',
         ]));
+
+        // Build a diff of human-visible changes for the activity log
+        $after   = $task->fresh()->only(array_keys($before));
+        $changes = [];
+        foreach ($before as $k => $v) {
+            if ((string)$v !== (string)($after[$k] ?? '')) {
+                $changes[$k] = [$v, $after[$k]];
+            }
+        }
+
+        if (!empty($changes)) {
+            $authUser2   = $request->attributes->get('auth_user');
+            $action      = isset($changes['status']) ? 'status_changed' : 'updated';
+            $description = ($authUser2?->username ?? 'System') . " updated task \"{$task->title}\"";
+            if (isset($changes['status'])) {
+                $description = ($authUser2?->username ?? 'System') . " changed status from \"{$changes['status'][0]}\" to \"{$changes['status'][1]}\"";
+            }
+            ActivityLog::record('task', $task->id, $action, $description, $authUser2?->id, $changes);
+        }
 
         $datesChanged    = ($task->start_date !== $oldStart || $task->due_date !== $oldDue);
         $skipConstraints = in_array($task->constraint_type ?? 'ASAP', ['MSO', 'MFO']);
@@ -183,6 +231,12 @@ class TaskController extends Controller {
                 return response()->json(['error' => 'You can only delete your own tasks'], 403);
             }
         }
+
+        $authUser3 = $request->attributes->get('auth_user');
+        ActivityLog::record('task', $task->id, 'deleted',
+            ($authUser3?->username ?? 'System') . " deleted task \"{$task->title}\"",
+            $authUser3?->id
+        );
 
         $task->delete();
         return response()->json(['message' => 'Task deleted']);
@@ -268,7 +322,16 @@ class TaskController extends Controller {
     }
 
     public function updateResources(Request $request, $id) {
-        $data = $request->validate(['resources' => 'array']);
+        // Fix for audit finding H-7: validate each resource item explicitly.
+        // Without this, arbitrary user_id values (non-existent users) and negative
+        // or astronomically large hour values could corrupt EVM/cost calculations.
+        $data = $request->validate([
+            'resources'                   => 'array|max:50',
+            'resources.*.user_id'         => 'required|integer|exists:users,id',
+            'resources.*.estimated_hours' => 'nullable|numeric|min:0|max:99999',
+            'resources.*.actual_hours'    => 'nullable|numeric|min:0|max:99999',
+            'resources.*.allocation_pct'  => 'nullable|numeric|min:0|max:100',
+        ]);
         TaskResource::where('task_id', $id)->delete();
         foreach ($data['resources'] ?? [] as $res) {
             TaskResource::create([
@@ -276,6 +339,7 @@ class TaskController extends Controller {
                 'user_id'          => $res['user_id'],
                 'estimated_hours'  => $res['estimated_hours'] ?? 0,
                 'actual_hours'     => $res['actual_hours']    ?? 0,
+                'allocation_pct'   => $res['allocation_pct']  ?? 100,
             ]);
         }
         return response()->json(['message' => 'Resources updated']);

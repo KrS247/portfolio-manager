@@ -94,15 +94,16 @@ class ProjectController extends Controller {
 
     public function store(Request $request) {
         $data = $request->validate([
-            'program_id' => 'required|integer',
-            'name' => 'required|string',
+            // Fix L-5: added exists:programs,id so orphaned projects cannot be created
+            'program_id'  => 'required|integer|exists:programs,id',
+            'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'nullable|string',
-            'priority' => 'nullable|integer|between:1,10',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'owner_id' => 'nullable|integer',
-            'clickup_id' => 'nullable|string',
+            'status'      => 'nullable|in:active,on_hold,completed,cancelled',
+            'priority'    => 'nullable|integer|between:1,10',
+            'start_date'  => 'nullable|date',
+            'end_date'    => 'nullable|date',
+            'owner_id'    => 'nullable|integer|exists:users,id',
+            'clickup_id'  => 'nullable|string|max:100',
         ]);
 
         if ($this->isPM($request)) {

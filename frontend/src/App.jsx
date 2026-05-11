@@ -25,6 +25,7 @@ import CompaniesAdmin from './pages/admin/CompaniesAdmin';
 import Reports from './pages/Reports';
 import Capacity from './pages/Capacity';
 import RiskManagement from './pages/RiskManagement';
+import Calendar from './pages/Calendar';
 
 function AppRoutes() {
   return (
@@ -132,8 +133,14 @@ function AppRoutes() {
       } />
 
       <Route path="/risk-management" element={
-        <ProtectedRoute pageSlug="tasks">
+        <ProtectedRoute pageSlug="risks">
           <Layout><RiskManagement /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/calendar" element={
+        <ProtectedRoute pageSlug="calendar">
+          <Layout><Calendar /></Layout>
         </ProtectedRoute>
       } />
 

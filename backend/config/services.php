@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+    ],
+
+    'backup' => [
+        'token' => env('BACKUP_TOKEN'),
+    ],
+
+    'clickup' => [
+        'token' => env('CLICKUP_MCP_TOKEN'),
+    ],
+
 ];

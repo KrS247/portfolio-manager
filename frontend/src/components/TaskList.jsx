@@ -80,7 +80,11 @@ function TaskNode({ task, depth, canEdit, onEdit, onDelete, onAddSubtask, expand
             <PriorityBadge priority={task.priority} />
             <div style={{ flex: 1 }}>
               <div style={styles.taskTitle}>
-                {task.is_milestone ? <><StarBorderIcon style={{ fontSize: 14, verticalAlign: 'middle', color: '#d97706', marginRight: 2 }} /></> : ''}{task.title}
+                {task.is_milestone && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fef3c7', color: '#b45309', fontSize: '0.68rem', fontWeight: 800, padding: '1px 6px', borderRadius: 4, border: '1px solid #fde68a', marginRight: 6, letterSpacing: '0.04em', verticalAlign: 'middle' }}>
+                    <StarBorderIcon style={{ fontSize: 11 }} />MILESTONE
+                  </span>
+                )}{task.title}
                 {hasChildren && (
                   <span style={styles.subtaskCount}>{task._children.length} subtask{task._children.length !== 1 ? 's' : ''}</span>
                 )}

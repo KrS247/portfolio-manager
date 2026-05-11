@@ -17,7 +17,8 @@ return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    // SOC 2 CC6.7 / ISO A.8.28: restrict to only the HTTP methods the API actually uses
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => env('FRONTEND_ORIGIN', 'http://localhost:5173') === '*'
         ? ['*']
@@ -25,14 +26,23 @@ return [
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    // SOC 2 CC6.7: whitelist only the headers the API actually requires
+    'allowed_headers' => [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'X-Backup-Token',
+    ],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    // Cache preflight for 1 hour to reduce OPTIONS request overhead
+    'max_age' => 3600,
 
-    // JWT auth uses Authorization headers — credentials (cookies) not needed.
-    // Must be false when allowed_origins is ['*'].
+    // Fix for audit finding H-10: HttpOnly cookie-based JWT requires credentials.
+    // Must be false (and cannot be true) when allowed_origins is ['*'].
+    // With a specific FRONTEND_ORIGIN, cookies are sent cross-origin correctly.
     'supports_credentials' => env('FRONTEND_ORIGIN', 'http://localhost:5173') !== '*',
 
 ];

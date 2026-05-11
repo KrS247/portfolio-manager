@@ -21,6 +21,10 @@ class ReportController extends Controller
             return response()->json(['error' => 'parent_type and parent_id are required'], 422);
         }
 
+        // Fix for audit finding M-8: only admin users may see individual hourly rates.
+        $authUser = $request->attributes->get('auth_user');
+        $showRate = $authUser && (bool) $authUser->role?->is_admin;
+
         $tasks   = $this->loadTasks($parentType, $parentId);
         $taskIds = $tasks->pluck('id');
 
@@ -48,32 +52,45 @@ class ReportController extends Controller
 
             $byUser[$key]['estimated_hours'] += $est;
             $byUser[$key]['actual_hours']    += $act;
-            $byUser[$key]['tasks'][] = [
+
+            $taskRow = [
                 'task_id'         => $r->task_id,
                 'task_title'      => $r->task?->title ?? '',
                 'estimated_hours' => round($est, 2),
                 'actual_hours'    => round($act, 2),
-                'estimated_cost'  => round($est * $rate, 2),
-                'actual_cost'     => round($act * $rate, 2),
             ];
+            // Cost columns are admin-only (M-8 fix); calculated below in $result map
+            if ($showRate) {
+                $taskRow['estimated_cost'] = round($est * $rate, 2);
+                $taskRow['actual_cost']    = round($act * $rate, 2);
+            }
+
+            $byUser[$key]['tasks'][] = $taskRow;
         }
 
-        $result = array_values(array_map(function ($u) {
+        $result = array_values(array_map(function ($u) use ($showRate) {
             $est  = $u['estimated_hours'];
             $act  = $u['actual_hours'];
             $rate = $u['hourly_rate'];
-            return [
+
+            $row = [
                 'user_id'         => $u['user_id'],
                 'user_name'       => $u['user_name'],
-                'hourly_rate'     => $rate,
                 'estimated_hours' => round($est, 2),
                 'actual_hours'    => round($act, 2),
-                'estimated_cost'  => round($est * $rate, 2),
-                'actual_cost'     => round($act * $rate, 2),
                 'utilisation_pct' => $est > 0 ? round(($act / $est) * 100, 1) : null,
                 'over_budget'     => $act > $est,
                 'tasks'           => $u['tasks'],
             ];
+
+            // Only expose financial data to admins (M-8 fix)
+            if ($showRate) {
+                $row['hourly_rate']    = $rate;
+                $row['estimated_cost'] = round($est * $rate, 2);
+                $row['actual_cost']    = round($act * $rate, 2);
+            }
+
+            return $row;
         }, $byUser));
 
         usort($result, fn($a, $b) => strcmp($a['user_name'], $b['user_name']));

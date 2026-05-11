@@ -5,6 +5,8 @@ import { usePermissions } from '../hooks/usePermissions';
 import { clearPermissionsCache } from '../hooks/usePermissions';
 import client from '../api/client';
 import UserManual from './UserManual';
+import WelcomeModal from './WelcomeModal';
+import AiChat from './AiChat';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const NAV_ITEMS = [
@@ -16,6 +18,7 @@ const NAV_ITEMS = [
   { slug: 'reports',            label: 'Reports',      path: '/reports' },
   { slug: 'capacity',           label: 'Capacity',     path: '/capacity' },
   { slug: 'tasks',              label: 'Risk Management', path: '/risk-management' },
+  { slug: 'tasks',              label: 'My Calendar',     path: '/calendar' },
 ];
 
 const ADMIN_ITEMS = [
@@ -35,14 +38,27 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState('');
-  const [logoUrl, setLogoUrl]         = useState(null);
-  const [showManual, setShowManual]   = useState(false);
+  // logoKey is bumped each time branding is refreshed to force the browser to
+  // re-fetch the image and bypass its cache after an admin uploads a new logo.
+  const [logoKey, setLogoKey]     = useState(Date.now());
+  const [logoError, setLogoError] = useState(false);
+  const [showManual,   setShowManual]   = useState(false);
+
+  // Show the welcome modal unless the user has previously dismissed it
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (!user?.id) return false;
+    return !localStorage.getItem(`pm_welcome_dismissed_${user.id}`);
+  });
 
   const fetchBranding = () => {
     client.get('/company-settings')
       .then(res => {
         setCompanyName(res.data.company_name || '');
-        setLogoUrl(res.data.logo_url || null);
+        // Bump the key so the browser re-fetches the logo after an update.
+        // Reset logoError so a newly uploaded logo is shown even if the old
+        // request had failed (e.g. no logo was set previously).
+        setLogoKey(Date.now());
+        setLogoError(false);
       })
       .catch(() => {});
   };
@@ -73,8 +89,17 @@ export default function Layout({ children }) {
       <aside className="app-sidebar" style={styles.sidebar}>
         <div style={styles.logo}>
           <div style={styles.brandRow}>
-            {logoUrl && (
-              <img src={logoUrl} alt="Company logo" style={styles.logoImg} />
+            {/* Always point at the public /logo endpoint.
+                The URL is constructed relative to the API base so it works in
+                any environment (local, staging, production) without baking in
+                APP_URL.  onError hides the element when no logo is uploaded. */}
+            {!logoError && (
+              <img
+                src={`${client.defaults.baseURL}/logo?v=${logoKey}`}
+                alt="Company logo"
+                style={styles.logoImg}
+                onError={() => setLogoError(true)}
+              />
             )}
             <span>Portfolio<br /><span style={styles.logoAccent}>Manager</span></span>
           </div>
@@ -130,11 +155,22 @@ export default function Layout({ children }) {
       {/* ── User Manual panel ── */}
       {showManual && <UserManual onClose={() => setShowManual(false)} />}
 
+      {/* ── Welcome modal (first login / per-user preference) ── */}
+      {showWelcome && <WelcomeModal user={user} onClose={() => setShowWelcome(false)} />}
+
+      {/* ── AI Chat panel ── */}
+      <AiChat />
+
       <style>{`
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to   { transform: translateX(0);    opacity: 1; }
         }
+        @keyframes slideUpIn {
+          from { transform: translateY(12px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+
       `}</style>
     </div>
   );

@@ -7,14 +7,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Add created_by to tasks
-        if (!Schema::hasColumn('tasks', 'created_by')) {
+        // Add created_by to tasks (guard: tasks table may not exist in test env yet)
+        if (Schema::hasTable('tasks') && !Schema::hasColumn('tasks', 'created_by')) {
             Schema::table('tasks', function ($table) {
                 $table->unsignedBigInteger('created_by')->nullable()->after('updated_at');
             });
         }
 
-        // Insert role if it doesn't exist
+        // Insert role if it doesn't exist (guard: roles/pages tables may not exist in test env)
+        if (!Schema::hasTable('roles') || !Schema::hasTable('pages')) {
+            return;
+        }
+
         $exists = DB::table('roles')->where('name', 'project_manager')->exists();
         if (!$exists) {
             $roleId = DB::table('roles')->insertGetId([

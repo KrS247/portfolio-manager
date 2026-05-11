@@ -128,6 +128,39 @@ export default function Dashboard() {
 
   const totalAlerts = (highRisk?.length || 0) + (overdue?.length || 0) + (overBudget?.length || 0);
 
+  // ── My Tasks widget ─────────────────────────────────────────────────────────
+  const myTasks = useMemo(() => {
+    if (!tasks || !user) return [];
+    return tasks
+      .filter(t => t.assigned_to === user.id && !['completed', 'cancelled'].includes(t.status))
+      .sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date);
+      })
+      .slice(0, 8);
+  }, [tasks, user]);
+
+  // ── Upcoming Milestones widget ───────────────────────────────────────────────
+  const upcomingMilestones = useMemo(() => {
+    if (!tasks) return [];
+    const today = new Date();
+    const in60  = new Date(); in60.setDate(today.getDate() + 60);
+    return tasks
+      .filter(t => t.is_milestone && t.due_date && !['completed', 'cancelled'].includes(t.status))
+      .filter(t => { const d = new Date(t.due_date); return d >= today && d <= in60; })
+      .sort((a, b) => a.due_date.localeCompare(b.due_date))
+      .slice(0, 8);
+  }, [tasks]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const isOverdue = (date) => date && date < today;
+  const daysUntil = (date) => {
+    if (!date) return null;
+    return Math.ceil((new Date(date) - new Date()) / 86400000);
+  };
+
   return (
     <div>
       <h1 style={styles.heading}>Welcome, {user?.username}</h1>
@@ -196,6 +229,66 @@ export default function Dashboard() {
           )}
         </section>
       )}
+
+      {/* ── Personal Widgets Row ─────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+
+        {/* My Tasks Widget */}
+        <div style={styles.widget}>
+          <div style={styles.widgetHeader}>
+            <span style={styles.widgetTitle}>📋 My Tasks</span>
+            <Link to="/calendar" style={styles.widgetLink}>View Calendar →</Link>
+          </div>
+          {tLoad && <div style={styles.widgetEmpty}>Loading…</div>}
+          {!tLoad && myTasks.length === 0 && <div style={styles.widgetEmpty}>No open tasks assigned to you 🎉</div>}
+          <div style={styles.widgetScroll}>
+            {myTasks.map(t => (
+              <Link key={t.id} to={taskUrl(t)} style={styles.widgetRow}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>
+                    <span style={{ ...styles.statusPill, ...statusStyle(t.status), fontSize: '0.7rem', padding: '1px 6px' }}>{t.status.replace('_', ' ')}</span>
+                    {t.due_date && <span style={{ marginLeft: 6, color: isOverdue(t.due_date) ? '#dc2626' : '#6b7280' }}>
+                      {isOverdue(t.due_date) ? '⚠ ' : ''}Due {t.due_date}
+                    </span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#9ca3af', flexShrink: 0 }}>
+                  {t.percent_complete}%
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming Milestones Widget */}
+        <div style={styles.widget}>
+          <div style={styles.widgetHeader}>
+            <span style={styles.widgetTitle}>🏁 Upcoming Milestones</span>
+            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Next 60 days</span>
+          </div>
+          {tLoad && <div style={styles.widgetEmpty}>Loading…</div>}
+          {!tLoad && upcomingMilestones.length === 0 && <div style={styles.widgetEmpty}>No milestones in the next 60 days.</div>}
+          <div style={styles.widgetScroll}>
+            {upcomingMilestones.map(t => {
+              const days = daysUntil(t.due_date);
+              return (
+                <Link key={t.id} to={taskUrl(t)} style={styles.widgetRow}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>{t.due_date}</div>
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: days <= 7 ? '#dc2626' : days <= 14 ? '#d97706' : '#059669', background: days <= 7 ? '#fee2e2' : days <= 14 ? '#fef3c7' : '#f0fdf4', padding: '2px 7px', borderRadius: 10 }}>
+                      {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days}d`}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* ── Schedule View ────────────────────────────────────────────── */}
       <section style={{ ...styles.section, marginBottom: '1.5rem' }}>
@@ -540,4 +633,13 @@ const styles = {
   programHeader:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' },
   programName:      { fontWeight: 700, color: '#1d1d1d', fontSize: '0.95rem', textDecoration: 'none', display: 'block' },
   programMeta:      { fontSize: '0.78rem', color: '#9ca3af', marginLeft: '1.25rem' },
+
+  // Widget styles
+  widget:           { background: '#fff', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 0 },
+  widgetHeader:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.65rem', borderBottom: '1px solid #f0f0f0' },
+  widgetTitle:      { fontWeight: 700, fontSize: '0.95rem', color: '#1d1d1d' },
+  widgetLink:       { fontSize: '0.78rem', color: '#016D2D', textDecoration: 'none', fontWeight: 600 },
+  widgetEmpty:      { fontSize: '0.85rem', color: '#9ca3af', padding: '1rem 0', textAlign: 'center' },
+  widgetScroll:     { maxHeight: '270px', overflowY: 'auto', overflowX: 'hidden' },
+  widgetRow:        { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid #f9fafb', textDecoration: 'none', color: 'inherit' },
 };

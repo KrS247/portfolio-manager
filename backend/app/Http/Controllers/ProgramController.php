@@ -72,14 +72,15 @@ class ProgramController extends Controller {
 
     public function store(Request $request) {
         $data = $request->validate([
-            'portfolio_id' => 'required|integer',
-            'name' => 'required|string',
-            'description' => 'nullable|string',
-            'status' => 'nullable|string',
-            'priority' => 'nullable|integer|between:1,10',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'owner_id' => 'nullable|integer',
+            // Fix L-5: added exists:portfolios,id so orphaned programs cannot be created
+            'portfolio_id' => 'required|integer|exists:portfolios,id',
+            'name'         => 'required|string|max:255',
+            'description'  => 'nullable|string',
+            'status'       => 'nullable|in:active,on_hold,completed,cancelled',
+            'priority'     => 'nullable|integer|between:1,10',
+            'start_date'   => 'nullable|date',
+            'end_date'     => 'nullable|date',
+            'owner_id'     => 'nullable|integer|exists:users,id',
         ]);
 
         if ($this->isPM($request)) {

@@ -69,7 +69,16 @@ class PermissionController extends Controller {
     }
 
     public function update(Request $request) {
-        $data = $request->validate(['permissions' => 'required|array']);
+        // Fix for audit finding H-8: validate every item in the permissions array.
+        // Without this, arbitrary strings could be stored in access_level (breaking
+        // Authorize middleware) and non-existent role_id/page_id values could create
+        // orphaned permission rows.
+        $data = $request->validate([
+            'permissions'                => 'required|array',
+            'permissions.*.role_id'      => 'required|integer|exists:roles,id',
+            'permissions.*.page_id'      => 'required|integer|exists:pages,id',
+            'permissions.*.access_level' => 'required|in:none,view,edit',
+        ]);
 
         foreach ($data['permissions'] as $perm) {
             PagePermission::updateOrCreate(
@@ -77,6 +86,13 @@ class PermissionController extends Controller {
                 ['access_level' => $perm['access_level']]
             );
         }
+
+        $admin = $request->attributes->get('auth_user');
+        \Illuminate\Support\Facades\Log::info('PermissionController: permissions updated', [
+            'ip'       => $request->ip(),
+            'admin_id' => $admin?->id,
+            'count'    => count($data['permissions']),
+        ]);
 
         return response()->json(['message' => 'Permissions updated']);
     }

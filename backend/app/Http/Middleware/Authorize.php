@@ -1,7 +1,10 @@
 <?php
+
 namespace App\Http\Middleware;
+
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use App\Models\PagePermission;
 use App\Models\Page;
 
@@ -18,7 +21,9 @@ class Authorize {
                 if ($tokenUser) {
                     $user = \App\Models\User::with('role')->find($tokenUser->getKey());
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                // Catch Throwable (not just Exception) so PHP Errors and
+                // TypeErrors from JWT parsing also return a clean 401.
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
         }
@@ -56,6 +61,17 @@ class Authorize {
         $userLevel = $permission ? ($levelMap[$permission->access_level] ?? 0) : 0;
 
         if ($userLevel < $required) {
+            // SOC 2: CC7.2 | ISO A.8.15 — log every authorization denial
+            Log::warning('Authorize: access denied', [
+                'ip'       => $request->ip(),
+                'user_id'  => $user->id,
+                'role'     => $user->role?->name,
+                'page'     => $pageSlug,
+                'required' => $requiredLevel,
+                'granted'  => $permission?->access_level ?? 'none',
+                'method'   => $request->method(),
+                'path'     => $request->path(),
+            ]);
             return response()->json(['error' => 'Insufficient permissions'], 403);
         }
 

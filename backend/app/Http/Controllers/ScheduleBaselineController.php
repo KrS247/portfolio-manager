@@ -16,13 +16,19 @@ class ScheduleBaselineController extends Controller
             'parent_id'   => 'required|integer',
         ]);
 
-        $baselines = ScheduleBaseline::where('parent_type', $request->parent_type)
+        $query = ScheduleBaseline::where('parent_type', $request->parent_type)
             ->where('parent_id', $request->parent_id)
             ->with('creator:id,username')
-            ->orderByDesc('created_at')
-            ->get();
+            ->orderByDesc('created_at');
 
-        return response()->json($baselines);
+        // Fix for audit finding M-11: PMs only see baselines they created
+        $user = $request->attributes->get('auth_user');
+        $isPM = $user && $user->role?->name === 'project_manager' && !$user->role?->is_admin;
+        if ($isPM) {
+            $query->where('created_by', $user->id);
+        }
+
+        return response()->json($query->get());
     }
 
     /** POST /baselines */
@@ -121,9 +127,19 @@ class ScheduleBaselineController extends Controller
     }
 
     /** DELETE /baselines/{id} */
-    public function destroy(int $id)
+    public function destroy(Request $request, int $id)
     {
-        ScheduleBaseline::findOrFail($id)->delete();
+        $baseline = ScheduleBaseline::findOrFail($id);
+
+        $user = $request->attributes->get('auth_user');
+        $isPM = $user && $user->role?->name === 'project_manager' && !$user->role?->is_admin;
+
+        // PMs may only delete baselines they created
+        if ($isPM && (int)$baseline->created_by !== (int)$user->id) {
+            return response()->json(['error' => 'You can only delete baselines you created'], 403);
+        }
+
+        $baseline->delete();
         return response()->json(['message' => 'Baseline deleted.']);
     }
 }

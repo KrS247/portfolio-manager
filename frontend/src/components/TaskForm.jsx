@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import client from '../api/client';
 import PrioritySelect from './PrioritySelect';
 import ProgressBar from './ProgressBar';
@@ -11,6 +11,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import FlagIcon from '@mui/icons-material/Flag';
+import ForumIcon from '@mui/icons-material/Forum';
+import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 
 // ── Risk helpers ──────────────────────────────────────────────────────────────
 function getRiskMeta(rate) {
@@ -23,9 +27,55 @@ function getRiskMeta(rate) {
 const PROB_LABELS = { 1: 'Very Low', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Very High' };
 const IMP_LABELS  = { 1: 'Negligible', 2: 'Minor', 3: 'Moderate', 4: 'Major', 5: 'Severe' };
 
+function getActivityColor(action) {
+  if (action === 'created')        return '#016D2D';
+  if (action === 'deleted')        return '#dc2626';
+  if (action === 'status_changed') return '#7c3aed';
+  if (action === 'comment_added')  return '#2563eb';
+  return '#d97706';
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function TaskForm({ parentType, parentId, task, parentTaskId = null, tasks = [], onSave, onCancel, users = [] }) {
   const [activeTab, setActiveTab] = useState('task');
+
+  // ── Comments & Activity state ────────────────────────────────────────────
+  const [comments,     setComments]     = useState([]);
+  const [activity,     setActivity]     = useState([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [commentTab,   setCommentTab]   = useState('comments'); // 'comments' | 'activity'
+  const [postingComment, setPostingComment] = useState(false);
+  const commentsEndRef = useRef(null);
+
+  useEffect(() => {
+    if (task?.id && activeTab === 'comments') {
+      client.get(`/tasks/${task.id}/comments`).then(r => setComments(r.data)).catch(() => {});
+      client.get(`/tasks/${task.id}/activity`).then(r => setActivity(r.data)).catch(() => {});
+    }
+  }, [task?.id, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'comments') commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments, activeTab]);
+
+  const submitComment = async () => {
+    if (!commentInput.trim() || postingComment) return;
+    setPostingComment(true);
+    try {
+      const res = await client.post(`/tasks/${task.id}/comments`, { content: commentInput.trim() });
+      setComments(c => [...c, res.data]);
+      setCommentInput('');
+      // refresh activity
+      client.get(`/tasks/${task.id}/activity`).then(r => setActivity(r.data)).catch(() => {});
+    } catch {/* silent */} finally { setPostingComment(false); }
+  };
+
+  const deleteComment = async (cid) => {
+    try {
+      await client.delete(`/tasks/${task.id}/comments/${cid}`);
+      setComments(c => c.filter(x => x.id !== cid));
+    } catch {/* silent */}
+  };
 
   // ── Task form state ──────────────────────────────────────────────────────
   const [form, setForm] = useState({
@@ -49,6 +99,14 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
     schedule_mode:   task?.schedule_mode    || 'auto',
   });
   const setSched = (k, v) => setSchedForm(f => ({ ...f, [k]: v }));
+
+  // ── Recurrence state ──────────────────────────────────────────────────────
+  const [recurForm, setRecurForm] = useState({
+    recurrence_type:     task?.recurrence_type     || 'none',
+    recurrence_interval: task?.recurrence_interval || 1,
+    recurrence_end_date: task?.recurrence_end_date || '',
+  });
+  const setRecur = (k, v) => setRecurForm(f => ({ ...f, [k]: v }));
 
   // Read-only CPM fields (display only)
   const cpmFields = task ? {
@@ -227,9 +285,12 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
         parent_type:     parentType,
         parent_id:       parentId,
         parent_task_id:  form.parent_task_id || null,
-        constraint_type: schedForm.constraint_type,
-        constraint_date: schedForm.constraint_date || null,
-        schedule_mode:   schedForm.schedule_mode,
+        constraint_type:      schedForm.constraint_type,
+        constraint_date:      schedForm.constraint_date || null,
+        schedule_mode:        schedForm.schedule_mode,
+        recurrence_type:      recurForm.recurrence_type !== 'none' ? recurForm.recurrence_type : null,
+        recurrence_interval:  recurForm.recurrence_interval || 1,
+        recurrence_end_date:  recurForm.recurrence_end_date || null,
       };
       const { data: savedTask } = task
         ? await client.put(`/tasks/${task.id}`, payload)
@@ -352,12 +413,22 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
           </button>
           <button
             type="button"
-            style={{ ...styles.tab, ...(activeTab === 'notes' ? styles.tabActive : {}), borderRight: 'none' }}
+            style={{ ...styles.tab, ...(activeTab === 'notes' ? styles.tabActive : {}) }}
             onClick={() => setActiveTab('notes')}
           >
             <NoteAltIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Notes
             {form.notes?.trim() && (
               <span style={{ ...styles.tabBadge, background: activeTab === 'notes' ? 'rgba(255,255,255,0.25)' : '#e0f2fe', color: activeTab === 'notes' ? '#fff' : '#0369a1' }}><CheckIcon style={{ fontSize: 11 }} /></span>
+            )}
+          </button>
+          <button
+            type="button"
+            style={{ ...styles.tab, ...(activeTab === 'comments' ? styles.tabActive : {}), borderRight: 'none' }}
+            onClick={() => setActiveTab('comments')}
+          >
+            <ForumIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Comments
+            {comments.length > 0 && (
+              <span style={{ ...styles.tabBadge, background: activeTab === 'comments' ? 'rgba(255,255,255,0.25)' : '#ede9fe', color: activeTab === 'comments' ? '#fff' : '#7c3aed' }}>{comments.length}</span>
             )}
           </button>
         </div>
@@ -373,7 +444,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               <input style={styles.input} value={form.title} onChange={e => set('title', e.target.value)} required placeholder="Task title" />
 
               <label style={styles.label}>Description</label>
-              <textarea style={{ ...styles.input, height: '140px', resize: 'vertical' }}
+              <textarea style={{ ...styles.input, height: '230px', minHeight: '168px', resize: 'vertical', flexShrink: 0 }}
                 value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optional description" />
 
               <div style={styles.row}>
@@ -806,6 +877,44 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             </>
           )}
 
+          {/* ── Recurrence section (inside schedule tab, after CPM) ── */}
+          {activeTab === 'schedule' && (
+            <div style={{ borderTop: '1.5px solid #e5e7eb', paddingTop: '1rem' }}>
+              <div style={{ ...styles.label, fontSize: '0.78rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.6rem' }}>🔁 Recurrence</div>
+              <div style={styles.row}>
+                <div style={{ flex: 1 }}>
+                  <label style={styles.label}>Repeat</label>
+                  <select style={styles.input} value={recurForm.recurrence_type} onChange={e => setRecur('recurrence_type', e.target.value)}>
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                {recurForm.recurrence_type !== 'none' && (
+                  <div style={{ width: 90 }}>
+                    <label style={styles.label}>Every</label>
+                    <input type="number" min={1} max={99} style={styles.input} value={recurForm.recurrence_interval}
+                      onChange={e => setRecur('recurrence_interval', parseInt(e.target.value) || 1)} />
+                  </div>
+                )}
+                {recurForm.recurrence_type !== 'none' && (
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>End Date</label>
+                    <input type="date" style={styles.input} value={recurForm.recurrence_end_date}
+                      onChange={e => setRecur('recurrence_end_date', e.target.value)} />
+                  </div>
+                )}
+              </div>
+              {recurForm.recurrence_type !== 'none' && (
+                <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.5rem 0 0' }}>
+                  Repeats every {recurForm.recurrence_interval} {recurForm.recurrence_type}{recurForm.recurrence_interval > 1 ? '' : ''}
+                  {recurForm.recurrence_end_date ? ` until ${recurForm.recurrence_end_date}` : ''}.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* ════════════════════════════════ NOTES TAB ══════════ */}
           {activeTab === 'notes' && (
             <>
@@ -818,6 +927,95 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                 onChange={e => set('notes', e.target.value)}
                 placeholder="Add notes, context, decisions, links, or any other details relevant to this task…"
               />
+            </>
+          )}
+
+          {/* ════════════════════════════ COMMENTS TAB ══════════════ */}
+          {activeTab === 'comments' && (
+            <>
+              {/* Sub-tab toggle */}
+              <div style={{ display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', marginBottom: 4 }}>
+                {[['comments', ForumIcon, 'Comments'], ['activity', HistoryIcon, 'Activity Log']].map(([key, Icon, label]) => (
+                  <button key={key} type="button"
+                    onClick={() => setCommentTab(key)}
+                    style={{ flex: 1, padding: '0.4rem 0.5rem', background: commentTab === key ? '#0A2B14' : '#f9fafb', color: commentTab === key ? '#fff' : '#6b7280', border: 'none', borderRight: key === 'comments' ? '1.5px solid #e5e7eb' : 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <Icon style={{ fontSize: 14 }} />{label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Comments list */}
+              {commentTab === 'comments' && (
+                <>
+                  {!task?.id && (
+                    <p style={{ fontSize: '0.83rem', color: '#9ca3af', textAlign: 'center', paddingTop: 24 }}>Save the task first to add comments.</p>
+                  )}
+                  {task?.id && (
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
+                      {comments.length === 0 && (
+                        <p style={{ fontSize: '0.83rem', color: '#9ca3af', textAlign: 'center', paddingTop: 24 }}>No comments yet. Be the first!</p>
+                      )}
+                      {comments.map(c => (
+                        <div key={c.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.6rem 0.8rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#016D2D' }}>{c.user?.username ?? 'Unknown'}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: '0.73rem', color: '#9ca3af' }}>{new Date(c.created_at).toLocaleString()}</span>
+                              <button type="button" onClick={() => deleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: 0, lineHeight: 1 }} title="Delete comment">
+                                <DeleteIcon style={{ fontSize: 15 }} />
+                              </button>
+                            </div>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.content}</p>
+                        </div>
+                      ))}
+                      <div ref={commentsEndRef} />
+                    </div>
+                  )}
+                  {task?.id && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 8 }}>
+                      <textarea
+                        value={commentInput}
+                        onChange={e => setCommentInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); } }}
+                        placeholder="Write a comment… (Enter to send, Shift+Enter for new line)"
+                        rows={2}
+                        style={{ flex: 1, padding: '0.45rem 0.65rem', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: '0.83rem', fontFamily: 'inherit', resize: 'none', outline: 'none' }}
+                      />
+                      <button type="button" onClick={submitComment} disabled={!commentInput.trim() || postingComment}
+                        style={{ background: '#016D2D', color: '#fff', border: 'none', borderRadius: 8, padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: !commentInput.trim() || postingComment ? 0.5 : 1 }}>
+                        <SendIcon style={{ fontSize: 18 }} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Activity log */}
+              {commentTab === 'activity' && (
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {!task?.id && <p style={{ fontSize: '0.83rem', color: '#9ca3af', textAlign: 'center', paddingTop: 24 }}>Save the task first to see activity.</p>}
+                  {task?.id && activity.length === 0 && <p style={{ fontSize: '0.83rem', color: '#9ca3af', textAlign: 'center', paddingTop: 24 }}>No activity recorded yet.</p>}
+                  {activity.map((log, i) => (
+                    <div key={log.id} style={{ display: 'flex', gap: 10, padding: '0.5rem 0', borderBottom: i < activity.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: getActivityColor(log.action), flexShrink: 0, marginTop: 5 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.82rem', color: '#374151' }}>{log.description}</div>
+                        {log.changes && Object.keys(log.changes).length > 0 && (
+                          <div style={{ marginTop: 3, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {Object.entries(log.changes).map(([field, [from, to]]) => (
+                              <span key={field} style={{ fontSize: '0.72rem', background: '#f3f4f6', borderRadius: 4, padding: '1px 6px', color: '#6b7280' }}>
+                                {field}: <s style={{ color: '#dc2626' }}>{String(from)}</s> → <strong style={{ color: '#016D2D' }}>{String(to)}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>{new Date(log.created_at).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
@@ -838,7 +1036,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
 
 const styles = {
   overlay:         { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal:           { background: '#fff', borderRadius: '12px', padding: '2rem', width: '680px', maxWidth: '95vw', height: '90vh', maxHeight: '780px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
+  modal:           { background: '#fff', borderRadius: '12px', padding: '2rem', width: '680px', maxWidth: '95vw', height: '90vh', maxHeight: '870px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' },
   title:           { fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem', color: '#1d1d1d' },
   breadcrumb:      { display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', marginBottom: '1rem', padding: '0.4rem 0.75rem', background: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' },
   breadcrumbParent:{ color: '#1d4ed8', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },

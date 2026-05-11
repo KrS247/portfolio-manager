@@ -5,6 +5,163 @@ const fmt = (n, prefix = '$') => n == null ? '—' : `${prefix}${Number(n).toLoc
 const fmtN = (n, dp = 2) => n == null ? '—' : Number(n).toFixed(dp);
 const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+// ─── Gantt helpers ────────────────────────────────────────────────────────────
+
+function buildMonths(startStr, endStr) {
+  const months = [];
+  let [y, m] = startStr.split('-').map(Number);
+  const [ey, em] = endStr.split('-').map(Number);
+  const MAX = 72; // cap at 6 years
+  while ((y < ey || (y === ey && m <= em)) && months.length < MAX) {
+    months.push({
+      year: y, month: m,
+      label: new Date(y, m - 1).toLocaleString('default', { month: 'short', year: '2-digit' }),
+      ym: `${y}-${String(m).padStart(2, '0')}`,
+    });
+    if (++m > 12) { m = 1; y++; }
+  }
+  return months;
+}
+
+function mIdx(dateStr, months) {
+  if (!dateStr) return -1;
+  const [y, mo] = dateStr.split('-').map(Number);
+  return months.findIndex(m => m.year === y && m.month === mo);
+}
+
+const BAR_COLORS = {
+  active:    '#016D2D',
+  on_hold:   '#d97706',
+  completed: '#2563eb',
+  closed:    '#9ca3af',
+};
+
+function ProjectGantt({ projects }) {
+  const dated = projects.filter(p => p.start_date && p.end_date);
+
+  if (!dated.length) return (
+    <div style={{ color: '#9ca3af', fontSize: '0.88rem', padding: '1.25rem', textAlign: 'center', border: '1px dashed #e5e7eb', borderRadius: '8px' }}>
+      No projects have both a start date and end date set.
+    </div>
+  );
+
+  const minDate = [...dated].sort((a, b) => a.start_date.localeCompare(b.start_date))[0].start_date;
+  const maxDate = [...dated].sort((a, b) => b.end_date.localeCompare(a.end_date))[0].end_date;
+  const months  = buildMonths(minDate, maxDate);
+
+  const todayYM   = new Date().toISOString().slice(0, 7);
+  const todayIdx  = months.findIndex(m => m.ym === todayYM);
+
+  const COL_W  = 58;   // px per month column
+  const NAME_W = 200;  // px for the project name column
+
+  // Group months by year for a two-row header
+  const yearGroups = months.reduce((acc, m) => {
+    if (!acc.length || acc[acc.length - 1].year !== m.year) acc.push({ year: m.year, count: 1 });
+    else acc[acc.length - 1].count++;
+    return acc;
+  }, []);
+
+  return (
+    <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.8rem' }}>
+      <div style={{ minWidth: `${NAME_W + months.length * COL_W}px` }}>
+
+        {/* Year header row */}
+        <div style={{ display: 'flex', background: '#0A2B14', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ width: NAME_W, minWidth: NAME_W, flexShrink: 0 }} />
+          {yearGroups.map(g => (
+            <div key={g.year} style={{ width: g.count * COL_W, minWidth: g.count * COL_W, textAlign: 'center', padding: '0.3rem 0', fontSize: '0.7rem', fontWeight: 700, color: '#00FFBC', borderLeft: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+              {g.year}
+            </div>
+          ))}
+        </div>
+
+        {/* Month header row */}
+        <div style={{ display: 'flex', background: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
+          <div style={{ width: NAME_W, minWidth: NAME_W, padding: '0.4rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+            Project
+          </div>
+          {months.map((m, i) => (
+            <div key={i} style={{ width: COL_W, minWidth: COL_W, textAlign: 'center', padding: '0.4rem 0', fontSize: '0.66rem', fontWeight: 700, color: i === todayIdx ? '#016D2D' : '#6b7280', borderLeft: '1px solid #e5e7eb', background: i === todayIdx ? '#f0fdf4' : 'transparent', flexShrink: 0 }}>
+              {m.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Project rows */}
+        {dated.map((proj, ri) => {
+          const rawSi = mIdx(proj.start_date, months);
+          const rawEi = mIdx(proj.end_date,   months);
+          // Clamp to grid range (handles dates outside the computed window)
+          const si = rawSi < 0 ? 0                   : Math.min(rawSi, months.length - 1);
+          const ei = rawEi < 0 ? months.length - 1   : Math.min(rawEi, months.length - 1);
+          const barColor = BAR_COLORS[proj.status] || BAR_COLORS.active;
+
+          return (
+            <div key={proj.id} style={{ display: 'flex', alignItems: 'center', height: 38, borderBottom: '1px solid #f0f0f0', background: ri % 2 === 0 ? '#fff' : '#fafafa' }}>
+              {/* Name cell */}
+              <div style={{ width: NAME_W, minWidth: NAME_W, padding: '0 0.75rem', fontWeight: 600, color: '#1d1d1d', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flexShrink: 0 }} title={proj.name}>
+                {proj.name}
+              </div>
+
+              {/* Month cells */}
+              {months.map((_, i) => {
+                const inBar  = i >= si && i <= ei;
+                const isFirst = i === si;
+                const isLast  = i === ei;
+                const isTodayCol = i === todayIdx;
+
+                return (
+                  <div key={i} style={{ width: COL_W, minWidth: COL_W, height: '100%', borderLeft: '1px solid #f0f0f0', position: 'relative', flexShrink: 0, background: isTodayCol ? 'rgba(1,109,45,0.04)' : 'transparent' }}>
+                    {inBar && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 7, bottom: 7,
+                        left:  isFirst ? 4 : 0,
+                        right: isLast  ? 4 : 0,
+                        background: barColor,
+                        opacity: 0.88,
+                        borderRadius: `${isFirst ? 4 : 0}px ${isLast ? 4 : 0}px ${isLast ? 4 : 0}px ${isFirst ? 4 : 0}px`,
+                        display: 'flex', alignItems: 'center', overflow: 'hidden',
+                      }}>
+                        {isFirst && (
+                          <span style={{ fontSize: '0.62rem', color: '#fff', fontWeight: 700, paddingLeft: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {proj.name}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {/* Today vertical line */}
+                    {isTodayCol && (
+                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 2, background: '#016D2D', opacity: 0.25 }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '1.5rem', padding: '0.6rem 0.75rem', borderTop: '1px solid #e5e7eb', background: '#f9fafb', flexWrap: 'wrap', alignItems: 'center' }}>
+          {Object.entries({ active: 'Active', on_hold: 'On Hold', completed: 'Completed', closed: 'Closed' }).map(([st, lbl]) => (
+            <div key={st} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#6b7280' }}>
+              <div style={{ width: 14, height: 10, borderRadius: 2, background: BAR_COLORS[st] }} />
+              {lbl}
+            </div>
+          ))}
+          {todayIdx >= 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#016D2D', fontWeight: 600 }}>
+              <div style={{ width: 2, height: 14, background: '#016D2D', opacity: 0.5 }} />
+              Current month
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STATUS_COLOR = { active: '#16a34a', on_hold: '#d97706', closed: '#6b7280' };
 const HEALTH_COLOR = { on_track: '#16a34a', at_risk: '#d97706', critical: '#dc2626' };
 const HEALTH_LABEL = { on_track: 'On Track', at_risk: 'At Risk', critical: 'Critical' };
@@ -29,20 +186,23 @@ function KPI({ label, value, sub, color }) {
 }
 
 export default function PortfolioStatusReport({ parentType, parentId }) {
-  const [portfolio, setPortfolio] = useState(null);
-  const [evm, setEvm]             = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
+  const [portfolio,    setPortfolio]    = useState(null);
+  const [evm,          setEvm]          = useState(null);
+  const [allProjects,  setAllProjects]  = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       client.get(`/portfolios/${parentId}`),
       client.get(`/evm?parent_type=portfolio&parent_id=${parentId}`),
+      client.get('/projects'),
     ])
-      .then(([pRes, evmRes]) => {
+      .then(([pRes, evmRes, projRes]) => {
         setPortfolio(pRes.data);
         setEvm(evmRes.data);
+        setAllProjects(projRes.data || []);
       })
       .catch(e => setError(e.response?.data?.error || 'Failed to load'))
       .finally(() => setLoading(false));
@@ -55,6 +215,10 @@ export default function PortfolioStatusReport({ parentType, parentId }) {
   const s = evm?.summary || {};
   const programs = portfolio.programs || [];
   const tasks    = evm?.tasks || [];
+
+  // Filter all projects down to those belonging to this portfolio's programs
+  const programIds = new Set(programs.map(p => p.id));
+  const portfolioProjects = allProjects.filter(p => programIds.has(p.program_id));
 
   const taskStats = {
     total:       tasks.length,
@@ -159,6 +323,11 @@ export default function PortfolioStatusReport({ parentType, parentId }) {
           </table>
         </Section>
       )}
+
+      {/* Project Timeline Gantt */}
+      <Section title="Project Timeline">
+        <ProjectGantt projects={portfolioProjects} />
+      </Section>
 
       {/* Footer */}
       <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#9ca3af' }}>
