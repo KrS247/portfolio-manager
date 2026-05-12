@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import OnboardingWizard from './components/OnboardingWizard';
+import client from './api/client';
 
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -30,17 +32,37 @@ import RiskManagement from './pages/RiskManagement';
 import Calendar from './pages/Calendar';
 
 function AppRoutes() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isAuthenticated } = useAuth();
+  // showWizard starts as null (undecided) to avoid a flash of the wizard
+  // while the API check is in flight. We only render it once we have a
+  // confirmed answer from the server, preventing stale localStorage from
+  // permanently blocking the app for existing users.
+  const [showWizard, setShowWizard] = useState(null);
 
-  const needsOnboarding = user?.is_admin && user?.onboarding_completed === false;
+  useEffect(() => {
+    if (!isAuthenticated || !user?.is_admin) {
+      setShowWizard(false);
+      return;
+    }
+    // Always verify with the server — localStorage value may be stale
+    client.get('/onboarding/status')
+      .then(res => {
+        const needs = res.data.needs_onboarding === true;
+        setShowWizard(needs);
+        // Sync the stored user object so subsequent renders are consistent
+        if (!needs) updateUser({ onboarding_completed: true });
+      })
+      .catch(() => setShowWizard(false)); // on error, never block the app
+  }, [isAuthenticated, user?.is_admin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOnboardingComplete = () => {
+    setShowWizard(false);
     updateUser({ onboarding_completed: true });
   };
 
   return (
     <>
-      {needsOnboarding && (
+      {showWizard === true && (
         <OnboardingWizard onComplete={handleOnboardingComplete} />
       )}
       <Routes>
