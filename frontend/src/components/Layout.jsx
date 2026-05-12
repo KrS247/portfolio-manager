@@ -17,8 +17,8 @@ const NAV_ITEMS = [
   { slug: 'tasks',              label: 'Tasks',        path: '/tasks' },
   { slug: 'reports',            label: 'Reports',      path: '/reports' },
   { slug: 'capacity',           label: 'Capacity',     path: '/capacity' },
-  { slug: 'tasks',              label: 'Risk Management', path: '/risk-management' },
-  { slug: 'tasks',              label: 'My Calendar',     path: '/calendar' },
+  { slug: 'risks',              label: 'Risk Management', path: '/risk-management' },
+  { slug: 'calendar',           label: 'My Calendar',     path: '/calendar' },
 ];
 
 const ADMIN_ITEMS = [

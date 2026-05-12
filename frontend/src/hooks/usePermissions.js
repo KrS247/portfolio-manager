@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 let cache = null;
 // Bust the cache whenever the app version increments (new pages added)
 // Increment this string any time new pages are added to the DB
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4'; // bumped: risks + calendar pages added to DB
 
 export function clearPermissionsCache() {
   cache = null;
