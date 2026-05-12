@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 class PortfolioController extends Controller {
     public function index(Request $request) {
         $query = Portfolio::with('owner');
-        if ($this->isPM($request)) {
-            $query->where('owner_id', $request->attributes->get('auth_user')->id);
-        }
+        // PMs can VIEW all company portfolios; write-access is restricted per-record
+        // in update() and destroy() — removing the list filter so new users can see
+        // sample data and existing portfolios they've been assigned to work on.
         $portfolios = $query->get();
 
         // ── Batch-load all related data to avoid N+1 queries ─────────────────
@@ -105,14 +105,8 @@ class PortfolioController extends Controller {
     public function show(Request $request, $id) {
         $portfolio = Portfolio::with('owner')->findOrFail($id);
         $programQuery = Program::where('portfolio_id', $id)->with('owner');
-        if ($this->isPM($request)) {
-            $programQuery->where('owner_id', $request->attributes->get('auth_user')->id);
-        }
         $programs = $programQuery->get();
         $taskQuery = Task::where('parent_type', 'portfolio')->where('parent_id', $id);
-        if ($this->isPM($request)) {
-            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
-        }
         $tasks = $taskQuery->get();
 
         return response()->json(array_merge($portfolio->toArray(), [

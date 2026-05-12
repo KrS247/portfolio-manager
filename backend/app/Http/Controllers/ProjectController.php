@@ -12,9 +12,7 @@ class ProjectController extends Controller {
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
         }
-        if ($this->isPM($request)) {
-            $query->where('owner_id', $request->attributes->get('auth_user')->id);
-        }
+        // PMs can VIEW all company projects; write-access restricted per-record in update()/destroy()
         $projects = $query->get()->map(function($proj) {
             $taskIds = Task::where('parent_type', 'project')->where('parent_id', $proj->id)->pluck('id');
             $task_count = $taskIds->count();

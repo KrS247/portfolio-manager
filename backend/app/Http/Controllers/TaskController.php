@@ -21,11 +21,7 @@ class TaskController extends Controller {
         if ($request->assigned_to) $query->where('assigned_to', $request->assigned_to);
         if ($request->status)      $query->where('status',      $request->status);
 
-        // PM sees only tasks they created
-        if ($this->isPM($request)) {
-            $query->where('created_by', $request->attributes->get('auth_user')->id);
-        }
-
+        // PMs can VIEW all company tasks; write-access restricted per-record in update()/destroy()
         $tasks = $query->orderBy('sequence')->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
     }
@@ -33,14 +29,6 @@ class TaskController extends Controller {
     // ── Detail ────────────────────────────────────────────────────────────────
     public function show(Request $request, $id) {
         $task = Task::with(['risk', 'assignedUser'])->findOrFail($id);
-
-        if ($this->isPM($request)) {
-            $authUser = $request->attributes->get('auth_user');
-            if ((int)$task->created_by !== (int)$authUser->id) {
-                return response()->json(['error' => 'Task not found'], 404);
-            }
-        }
-
         return response()->json($this->formatTask($task));
     }
 
@@ -48,10 +36,6 @@ class TaskController extends Controller {
     public function highRisk(Request $request) {
         $query = Task::whereHas('risk', fn($q) => $q->where('risk_rate', '>', 10))
             ->with(['risk', 'assignedUser']);
-
-        if ($this->isPM($request)) {
-            $query->where('created_by', $request->attributes->get('auth_user')->id);
-        }
 
         $tasks = $query->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
@@ -64,10 +48,6 @@ class TaskController extends Controller {
             ->where('due_date', '<', now()->toDateString())
             ->with(['risk', 'assignedUser']);
 
-        if ($this->isPM($request)) {
-            $query->where('created_by', $request->attributes->get('auth_user')->id);
-        }
-
         $tasks = $query->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
     }
@@ -76,10 +56,6 @@ class TaskController extends Controller {
     public function overBudget(Request $request) {
         $query = Task::whereHas('resources', fn($q) => $q->whereRaw('actual_hours > estimated_hours'))
             ->with(['risk', 'assignedUser', 'resources.user']);
-
-        if ($this->isPM($request)) {
-            $query->where('created_by', $request->attributes->get('auth_user')->id);
-        }
 
         $tasks = $query->get()->map(function($t) {
             $base = $this->formatTask($t);

@@ -13,9 +13,7 @@ class ProgramController extends Controller {
         if ($request->portfolio_id) {
             $query->where('portfolio_id', $request->portfolio_id);
         }
-        if ($this->isPM($request)) {
-            $query->where('owner_id', $request->attributes->get('auth_user')->id);
-        }
+        // PMs can VIEW all company programs; write-access restricted per-record in update()/destroy()
         $programs = $query->get()->map(function($prog) {
             $projectIds = Project::where('program_id', $prog->id)->pluck('id');
             $project_count = $projectIds->count();
@@ -53,14 +51,8 @@ class ProgramController extends Controller {
     public function show(Request $request, $id) {
         $program = Program::with('owner')->findOrFail($id);
         $projectQuery = Project::where('program_id', $id)->with('owner');
-        if ($this->isPM($request)) {
-            $projectQuery->where('owner_id', $request->attributes->get('auth_user')->id);
-        }
         $projects = $projectQuery->get();
         $taskQuery = Task::where('parent_type', 'program')->where('parent_id', $id);
-        if ($this->isPM($request)) {
-            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
-        }
         $tasks = $taskQuery->get();
 
         return response()->json(array_merge($program->toArray(), [
