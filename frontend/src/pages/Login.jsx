@@ -17,7 +17,14 @@ export default function Login() {
       await login(form.username, form.password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Login failed');
+      // data.error is a plain string from the API (e.g. "Invalid credentials"),
+      // not an object — access it directly, not via .message
+      const data = err.response?.data;
+      setError(
+        (typeof data?.error === 'string' ? data.error : null)
+        ?? data?.message
+        ?? 'Login failed'
+      );
     } finally {
       setLoading(false);
     }
