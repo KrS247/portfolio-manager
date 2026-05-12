@@ -6,6 +6,7 @@ import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PrioritySelect, { PRIORITY_LABELS, PriorityTag } from '../components/PrioritySelect';
+import InfoTooltip from '../components/InfoTooltip';
 
 function getRiskMeta(rate) {
   if (rate == null) return null;
@@ -118,7 +119,12 @@ export default function Portfolios() {
   return (
     <div>
       <div style={styles.header}>
-        <h1 style={styles.heading}>Portfolios</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 style={styles.heading}>Portfolios</h1>
+          <InfoTooltip>
+            A <strong>Portfolio</strong> is the top-level container that groups related Programs. Think of it as a strategic initiative — e.g. "Digital Transformation 2026". <strong>Always start here</strong> before creating Programs or Projects.
+          </InfoTooltip>
+        </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <ViewToggle view={viewMode} onChange={setView} />
           {canEdit('portfolios') && (

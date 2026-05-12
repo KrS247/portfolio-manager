@@ -55,7 +55,7 @@ class AuthController extends Controller
             ], 429, ['Retry-After' => 900]);
         }
 
-        $user = User::with('role')->where('username', $credentials['username'])->first();
+        $user = User::with(['role', 'company'])->where('username', $credentials['username'])->first();
 
         if (!$user || !password_verify($credentials['password'], $user->password_hash)) {
             // Increment failure counter; lock IP after 5 failures for 15 minutes
@@ -105,12 +105,14 @@ class AuthController extends Controller
             ->json([
                 'token' => $token,
                 'user'  => [
-                    'id'        => $user->id,
-                    'username'  => $user->username,
-                    'email'     => $user->email,
-                    'role_id'   => $user->role_id,
-                    'role_name' => $user->role?->name,
-                    'is_admin'  => (bool) ($user->role?->is_admin),
+                    'id'                   => $user->id,
+                    'username'             => $user->username,
+                    'email'                => $user->email,
+                    'role_id'              => $user->role_id,
+                    'role_name'            => $user->role?->name,
+                    'is_admin'             => (bool) ($user->role?->is_admin),
+                    'company_id'           => $user->company_id,
+                    'onboarding_completed' => (bool) optional($user->company)->onboarding_completed,
                 ],
             ])
             ->cookie(

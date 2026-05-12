@@ -5,6 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import PrioritySelect from '../components/PrioritySelect';
+import InfoTooltip from '../components/InfoTooltip';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GridViewIcon from '@mui/icons-material/GridView';
 import TableRowsIcon from '@mui/icons-material/TableRows';
@@ -117,7 +118,12 @@ export default function Programs() {
   return (
     <div>
       <div style={styles.header}>
-        <h1 style={styles.heading}>All Programs</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 style={styles.heading}>All Programs</h1>
+          <InfoTooltip>
+            A <strong>Program</strong> groups related Projects within a Portfolio — e.g. "Customer Experience Uplift". Programs must belong to a Portfolio. Create a Portfolio first if you haven't already.
+          </InfoTooltip>
+        </div>
         <ViewToggle view={viewMode} onChange={setView} />
       </div>
 

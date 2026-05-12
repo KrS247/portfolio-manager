@@ -87,15 +87,16 @@ abstract class DatabaseTestCase extends BaseTestCase
         // companies — includes tenant management columns for multi-tenancy tests
         DB::statement("
             CREATE TABLE IF NOT EXISTS companies (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                name          TEXT NOT NULL UNIQUE,
-                slug          TEXT UNIQUE,
-                plan          TEXT NOT NULL DEFAULT 'starter',
-                status        TEXT NOT NULL DEFAULT 'active',
-                trial_ends_at DATETIME,
-                max_users     INTEGER,
-                owner_email   TEXT,
-                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+                id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                name                 TEXT NOT NULL UNIQUE,
+                slug                 TEXT UNIQUE,
+                plan                 TEXT NOT NULL DEFAULT 'starter',
+                status               TEXT NOT NULL DEFAULT 'active',
+                trial_ends_at        DATETIME,
+                max_users            INTEGER,
+                owner_email          TEXT,
+                onboarding_completed INTEGER NOT NULL DEFAULT 0,
+                created_at           DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ");
 

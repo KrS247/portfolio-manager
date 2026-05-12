@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../context/AuthContext';
+import InfoTooltip from '../components/InfoTooltip';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -101,7 +102,12 @@ export default function RiskManagement() {
 
   return (
     <div>
-      <h1 style={styles.heading}><WarningAmberIcon style={{ fontSize: 22, verticalAlign: 'middle', marginRight: 6 }} />Risk Management</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h1 style={styles.heading}><WarningAmberIcon style={{ fontSize: 22, verticalAlign: 'middle', marginRight: 6 }} />Risk Management</h1>
+        <InfoTooltip>
+          The <strong>Risk Register</strong> captures risks identified against specific tasks. Each risk is scored by Probability × Impact to produce a Risk Rate, driving prioritisation and mitigation planning.
+        </InfoTooltip>
+      </div>
       <p style={styles.sub}>All risks across portfolios, programs, and projects.</p>
 
       {/* Summary chips */}

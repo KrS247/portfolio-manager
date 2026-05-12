@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApi } from '../hooks/useApi';
 import { usePermissions } from '../hooks/usePermissions';
 import { useAuth } from '../context/AuthContext';
+import InfoTooltip from '../components/InfoTooltip';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
@@ -118,7 +119,12 @@ export default function Tasks() {
     <div>
       {/* ── Header ──────────────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1d1d1d' }}>Tasks</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1d1d1d' }}>Tasks</h1>
+          <InfoTooltip>
+            <strong>Tasks</strong> are the units of work inside a Project. Assign owners, set dates, track % complete, add dependencies and attach risks. Tasks can have sub-tasks for further breakdown.
+          </InfoTooltip>
+        </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <ViewToggle view={viewMode} onChange={setView} />
           {canEdit('tasks') && portfolios?.length > 0 && (

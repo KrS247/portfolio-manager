@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import OnboardingWizard from './components/OnboardingWizard';
 
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -28,8 +30,20 @@ import RiskManagement from './pages/RiskManagement';
 import Calendar from './pages/Calendar';
 
 function AppRoutes() {
+  const { user, updateUser } = useAuth();
+
+  const needsOnboarding = user?.is_admin && user?.onboarding_completed === false;
+
+  const handleOnboardingComplete = () => {
+    updateUser({ onboarding_completed: true });
+  };
+
   return (
-    <Routes>
+    <>
+      {needsOnboarding && (
+        <OnboardingWizard onComplete={handleOnboardingComplete} />
+      )}
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -146,6 +160,7 @@ function AppRoutes() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 

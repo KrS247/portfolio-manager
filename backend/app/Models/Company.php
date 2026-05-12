@@ -7,9 +7,11 @@ class Company extends Model {
     public    $timestamps = false;
     protected $fillable = [
         'name', 'slug', 'plan', 'status', 'trial_ends_at', 'max_users', 'owner_email',
+        'onboarding_completed',
     ];
     protected $casts = [
-        'trial_ends_at' => 'datetime',
+        'trial_ends_at'        => 'datetime',
+        'onboarding_completed' => 'boolean',
     ];
 
     const CREATED_AT = 'created_at';

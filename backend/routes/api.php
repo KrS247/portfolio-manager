@@ -24,6 +24,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\OnboardingController;
 
 // ── Health check (public, no auth) ───────────────────────────────────────────
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'timestamp' => now()]));
@@ -179,6 +180,13 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('baselines',       [ScheduleBaselineController::class, 'store'])  ->middleware('authorize:tasks,edit');
     Route::get('baselines/{id}',   [ScheduleBaselineController::class, 'show'])   ->middleware('authorize:tasks,view');
     Route::delete('baselines/{id}',[ScheduleBaselineController::class, 'destroy'])->middleware('authorize:tasks,edit');
+
+    // Onboarding (admin only)
+    Route::get('onboarding/status',      [OnboardingController::class, 'status']);
+    Route::post('onboarding/workspace',  [OnboardingController::class, 'updateWorkspace']);
+    Route::post('onboarding/invite',     [OnboardingController::class, 'inviteUser']);
+    Route::post('onboarding/sample-data',[OnboardingController::class, 'loadSampleData']);
+    Route::post('onboarding/complete',   [OnboardingController::class, 'complete']);
 
     // AI Chat (OpenAI-powered)
     // Fix for audit finding H-5: chat executes write operations (update task status,

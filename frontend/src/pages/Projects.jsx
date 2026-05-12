@@ -5,6 +5,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import PrioritySelect from '../components/PrioritySelect';
+import InfoTooltip from '../components/InfoTooltip';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GridViewIcon from '@mui/icons-material/GridView';
 import TableRowsIcon from '@mui/icons-material/TableRows';
@@ -155,7 +156,12 @@ export default function Projects() {
   return (
     <div>
       <div style={styles.header}>
-        <h1 style={styles.heading}>All Projects</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 style={styles.heading}>All Projects</h1>
+          <InfoTooltip>
+            A <strong>Project</strong> delivers a specific outcome within a Program — e.g. "Website Redesign". Each Project has its own Gantt chart, EVM analysis and task list.
+          </InfoTooltip>
+        </div>
         <ViewToggle view={viewMode} onChange={setView} />
       </div>
 
