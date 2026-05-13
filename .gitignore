@@ -37,3 +37,7 @@ backend/storage/framework/views/
 
 # Railway / Vercel
 .vercel/
+
+# SQLite snapshot used by railway up direct deploys — not needed in git
+# because Railway now uses PostgreSQL and the seeder runs from the container image
+backend/database/portfolio_snapshot
