@@ -34,5 +34,7 @@ RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions sto
 
 EXPOSE 8080
 
-# Use shell form so $PORT env var is expanded at runtime
-CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+# Cache config/routes/views at startup, then run any pending migrations, then serve.
+# This ensures new schema changes in git are always applied to whatever DB is configured
+# (SQLite snapshot or an external PostgreSQL, depending on env vars).
+CMD php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
