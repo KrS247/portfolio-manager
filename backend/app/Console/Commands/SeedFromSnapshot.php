@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class SeedFromSnapshot extends Command
 {
-    protected $signature   = 'db:seed:from-snapshot';
+    protected $signature   = 'db:seed:from-snapshot {--force : Force re-seed even if data already exists}';
     protected $description = 'Copy data from the SQLite snapshot into the configured database (skipped if data already exists)';
 
     // Import order respects FK constraints
@@ -30,10 +30,17 @@ class SeedFromSnapshot extends Command
 
     public function handle(): int
     {
-        // Skip if already seeded
-        if (DB::table('users')->count() > 0) {
-            $this->info('Database already has users — skipping snapshot seed.');
+        // Skip if already fully seeded (portfolios is a good proxy — empty on fresh installs).
+        // We check BOTH users and portfolios to handle partially-seeded states where
+        // some tables got data but others didn't (a previous crashed run).
+        // Use --force to re-seed even when data exists (wipes and replaces everything).
+        $alreadySeeded = DB::table('users')->count() > 0 && DB::table('portfolios')->count() > 0;
+        if ($alreadySeeded && ! $this->option('force')) {
+            $this->info('Database already seeded — skipping snapshot seed. Use --force to re-seed.');
             return 0;
+        }
+        if ($this->option('force')) {
+            $this->warn('--force flag set: wiping and re-seeding all tables.');
         }
 
         $snapshotPath = database_path('portfolio.db');
@@ -96,6 +103,13 @@ class SeedFromSnapshot extends Command
         if (empty($rows)) {
             $this->line("  skip  {$table}: empty");
             return;
+        }
+
+        // Clear the table before inserting to handle partially-seeded states
+        if ($isPgsql) {
+            DB::statement("TRUNCATE \"{$table}\" RESTART IDENTITY CASCADE");
+        } else {
+            DB::table($table)->delete();
         }
 
         // Chunk inserts to avoid memory issues
