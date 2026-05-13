@@ -19,6 +19,13 @@ class RiskController extends Controller {
         $query = Risk::with(['task']);
         if ($request->task_id) $query->where('task_id', $request->task_id);
 
+        // Non-admin users only see risks whose associated task they created.
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $createdTaskIds = Task::where('created_by', $scope['userId'])->pluck('id');
+            $query->whereIn('task_id', $createdTaskIds);
+        }
+
         $risks = $query->get()->map(function ($risk) {
             $task = $risk->task;
             $row  = $risk->toArray();
@@ -80,13 +87,13 @@ class RiskController extends Controller {
             'status'          => 'nullable|in:open,active,mitigated,closed',
         ]);
 
-        // PM ownership check: PMs may only add risks to their own tasks
+        // Non-admin users may only add risks to tasks they created
         $authUser = $request->attributes->get('auth_user');
-        $isPM = $authUser && $authUser->role?->name === 'project_manager' && !$authUser->role?->is_admin;
-        if ($isPM) {
+        $isAdmin  = $authUser && $authUser->role?->is_admin;
+        if ($authUser && !$isAdmin) {
             $task = Task::find($data['task_id']);
             if (!$task || (int)$task->created_by !== (int)$authUser->id) {
-                return response()->json(['error' => 'You can only add risks to your own tasks'], 403);
+                return response()->json(['error' => 'You can only add risks to tasks you created'], 403);
             }
         }
 
@@ -106,13 +113,13 @@ class RiskController extends Controller {
     public function update(Request $request, $id) {
         $risk = Risk::findOrFail($id);
 
-        // PM ownership check: PMs may only update risks on their own tasks
+        // Non-admin users may only update risks on tasks they created
         $authUser = $request->attributes->get('auth_user');
-        $isPM = $authUser && $authUser->role?->name === 'project_manager' && !$authUser->role?->is_admin;
-        if ($isPM) {
+        $isAdmin  = $authUser && $authUser->role?->is_admin;
+        if ($authUser && !$isAdmin) {
             $task = Task::find($risk->task_id);
             if (!$task || (int)$task->created_by !== (int)$authUser->id) {
-                return response()->json(['error' => 'You can only edit risks on your own tasks'], 403);
+                return response()->json(['error' => 'You can only edit risks on tasks you created'], 403);
             }
         }
 

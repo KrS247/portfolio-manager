@@ -10,9 +10,14 @@ use Illuminate\Support\Facades\DB;
 class PortfolioController extends Controller {
     public function index(Request $request) {
         $query = Portfolio::with('owner');
-        // PMs can VIEW all company portfolios; write-access is restricted per-record
-        // in update() and destroy() — removing the list filter so new users can see
-        // sample data and existing portfolios they've been assigned to work on.
+
+        // Non-admin users only see portfolios they own or that contain tasks they
+        // created / are Responsible for / are a Resource on.
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['portfolioIds']);
+        }
+
         $portfolios = $query->get();
 
         // ── Batch-load all related data to avoid N+1 queries ─────────────────
@@ -104,9 +109,35 @@ class PortfolioController extends Controller {
 
     public function show(Request $request, $id) {
         $portfolio = Portfolio::with('owner')->findOrFail($id);
+
+        $scope = $this->visibleScope($request);
+        if ($scope !== null && !$scope['portfolioIds']->contains((int)$id)) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+
         $programQuery = Program::where('portfolio_id', $id)->with('owner');
-        $programs = $programQuery->get();
+        if ($scope !== null) {
+            $programQuery->whereIn('id', $scope['programIds']);
+        }
+        $programs = $programQuery->get()->map(function ($prog) {
+            $projectIds = \App\Models\Project::where('program_id', $prog->id)->pluck('id');
+            $pct = 0;
+            if ($projectIds->count() > 0) {
+                $pct = \Illuminate\Support\Facades\DB::table('tasks')
+                    ->where('parent_type', 'project')
+                    ->whereIn('parent_id', $projectIds)
+                    ->avg('percent_complete') ?? 0;
+            }
+            return array_merge($prog->toArray(), [
+                'project_count'         => $projectIds->count(),
+                'completion_percentage' => round((float)$pct, 1),
+            ]);
+        });
+
         $taskQuery = Task::where('parent_type', 'portfolio')->where('parent_id', $id);
+        if ($scope !== null) {
+            $taskQuery->whereIn('id', $scope['taskIds']);
+        }
         $tasks = $taskQuery->get();
 
         return response()->json(array_merge($portfolio->toArray(), [

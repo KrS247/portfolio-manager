@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import EditIcon from '@mui/icons-material/Edit';
@@ -55,8 +55,11 @@ export default function OnboardingWizard({ onComplete }) {
   const [step2Submitted, setStep2Submitted] = useState(false);
 
   // Step 3
-  const [sampleLoading, setSampleLoading] = useState(false);
-  const [sampleError,   setSampleError]   = useState('');
+  const [sampleLoading,    setSampleLoading]    = useState(false);
+  const [sampleError,      setSampleError]      = useState('');
+  const [sampleDataLoaded, setSampleDataLoaded] = useState(false);
+  const [deleteLoading,    setDeleteLoading]    = useState(false);
+  const [deleteError,      setDeleteError]      = useState('');
 
   /* ── Skip wizard ────────────────────────────────────────────────── */
   const skipAll = async () => {
@@ -129,14 +132,37 @@ export default function OnboardingWizard({ onComplete }) {
     setSampleError('');
     try {
       await client.post('/onboarding/sample-data');
+      setSampleDataLoaded(true);
       try { await client.post('/onboarding/complete'); } catch (_) {}
       onComplete();
       navigate('/portfolios');
     } catch (err) {
-      setSampleError(err.response?.data?.error?.message || 'Failed to load sample data. Please try again.');
+      setSampleError(err.response?.data?.error || err.response?.data?.error?.message || 'Failed to load sample data. Please try again.');
       setSampleLoading(false);
     }
   };
+
+  /* ── Delete sample data ────────────────────────────────────────── */
+  const handleDeleteData = async () => {
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await client.delete('/onboarding/sample-data');
+      setSampleDataLoaded(false);
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete sample data. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  /* ── Check sample-data status when step 3 opens ────────────────── */
+  useEffect(() => {
+    if (step !== 3) return;
+    client.get('/onboarding/sample-data')
+      .then(res => setSampleDataLoaded(res.data.loaded === true))
+      .catch(() => {}); // ignore — button defaults to "Load"
+  }, [step]);
 
   /* ── Shared card ────────────────────────────────────────────────── */
   return (
@@ -190,6 +216,10 @@ export default function OnboardingWizard({ onComplete }) {
               onSampleData={handleSampleData}
               sampleLoading={sampleLoading}
               sampleError={sampleError}
+              sampleDataLoaded={sampleDataLoaded}
+              onDeleteData={handleDeleteData}
+              deleteLoading={deleteLoading}
+              deleteError={deleteError}
             />
           )}
 
@@ -336,13 +366,15 @@ function InviteRow({ row, idx, showRemove, onChange, onRemove }) {
 }
 
 /* ── Step 3 ──────────────────────────────────────────────────────── */
-function Step3({ onScratch, onSampleData, sampleLoading, sampleError }) {
+function Step3({ onScratch, onSampleData, sampleLoading, sampleError,
+                 sampleDataLoaded, onDeleteData, deleteLoading, deleteError }) {
   return (
     <div>
       <h2 style={s.stepHeading}>Create Your First Portfolio</h2>
       <p style={s.stepSub}>How would you like to get started?</p>
 
-      {sampleError && <div style={s.errorBox}>{sampleError}</div>}
+      {sampleError  && <div style={s.errorBox}>{sampleError}</div>}
+      {deleteError  && <div style={s.errorBox}>{deleteError}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.25rem' }}>
         {/* Option A */}
@@ -360,21 +392,42 @@ function Step3({ onScratch, onSampleData, sampleLoading, sampleError }) {
         {/* Option B */}
         <div style={s.optionCard}>
           <div style={s.optionIcon}>
-            <AutoAwesomeIcon style={{ fontSize: 28, color: '#7c3aed' }} />
+            <AutoAwesomeIcon style={{ fontSize: 28, color: sampleDataLoaded ? '#dc2626' : '#7c3aed' }} />
           </div>
-          <div style={s.optionTitle}>Show me sample data</div>
-          <div style={s.optionDesc}>Pre-fill with a demo portfolio, programs, projects and tasks so you can explore right away.</div>
-          <button
-            onClick={onSampleData}
-            style={{ ...s.sampleBtn, marginTop: 'auto', width: '100%', opacity: sampleLoading ? 0.7 : 1 }}
-            disabled={sampleLoading}
-          >
-            {sampleLoading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <Spinner /> Loading…
-              </span>
-            ) : 'Load Sample Data'}
-          </button>
+          <div style={s.optionTitle}>
+            {sampleDataLoaded ? 'Sample data loaded' : 'Show me sample data'}
+          </div>
+          <div style={s.optionDesc}>
+            {sampleDataLoaded
+              ? 'A demo portfolio has been loaded. You can delete it here and start fresh.'
+              : 'Pre-fill with a demo portfolio, programs, projects and tasks so you can explore right away.'}
+          </div>
+
+          {sampleDataLoaded ? (
+            <button
+              onClick={onDeleteData}
+              style={{ ...s.deleteBtn, marginTop: 'auto', width: '100%', opacity: deleteLoading ? 0.7 : 1 }}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <Spinner /> Deleting…
+                </span>
+              ) : 'Delete Sample Data'}
+            </button>
+          ) : (
+            <button
+              onClick={onSampleData}
+              style={{ ...s.sampleBtn, marginTop: 'auto', width: '100%', opacity: sampleLoading ? 0.7 : 1 }}
+              disabled={sampleLoading}
+            >
+              {sampleLoading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <Spinner /> Loading…
+                </span>
+              ) : 'Load Sample Data'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -455,6 +508,15 @@ const s = {
     display: 'block',
     padding: '0.65rem 1.5rem',
     background: '#7c3aed', color: '#fff',
+    border: 'none', borderRadius: 8,
+    fontWeight: 700, fontSize: '0.95rem',
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
+  },
+  deleteBtn: {
+    display: 'block',
+    padding: '0.65rem 1.5rem',
+    background: '#dc2626', color: '#fff',
     border: 'none', borderRadius: 8,
     fontWeight: 700, fontSize: '0.95rem',
     cursor: 'pointer',

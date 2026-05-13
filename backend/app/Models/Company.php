@@ -7,11 +7,12 @@ class Company extends Model {
     public    $timestamps = false;
     protected $fillable = [
         'name', 'slug', 'plan', 'status', 'trial_ends_at', 'max_users', 'owner_email',
-        'onboarding_completed',
+        'onboarding_completed', 'sample_data_portfolio_id',
     ];
     protected $casts = [
-        'trial_ends_at'        => 'datetime',
-        'onboarding_completed' => 'boolean',
+        'trial_ends_at'            => 'datetime',
+        'onboarding_completed'     => 'boolean',
+        'sample_data_portfolio_id' => 'integer',
     ];
 
     const CREATED_AT = 'created_at';

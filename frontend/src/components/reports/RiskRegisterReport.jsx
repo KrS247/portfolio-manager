@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import client from '../../api/client';
 
 const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -41,8 +41,8 @@ function HeatMap({ risks }) {
         <div />
         {[1,2,3,4,5].map(i => <div key={i} style={{ textAlign: 'center', fontWeight: 700, color: '#6b7280', padding: '4px' }}>I={i}</div>)}
         {[5,4,3,2,1].map(p => (
-          <>
-            <div key={`p${p}`} style={{ fontWeight: 700, color: '#6b7280', display: 'flex', alignItems: 'center', paddingRight: '4px' }}>P={p}</div>
+          <Fragment key={p}>
+            <div style={{ fontWeight: 700, color: '#6b7280', display: 'flex', alignItems: 'center', paddingRight: '4px' }}>P={p}</div>
             {[1,2,3,4,5].map(i => {
               const k = `${p}_${i}`;
               const count = grid[k] || 0;
@@ -53,7 +53,7 @@ function HeatMap({ risks }) {
                 </div>
               );
             })}
-          </>
+          </Fragment>
         ))}
       </div>
       <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.72rem' }}>

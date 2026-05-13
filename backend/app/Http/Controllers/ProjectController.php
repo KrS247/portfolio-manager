@@ -12,7 +12,14 @@ class ProjectController extends Controller {
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
         }
-        // PMs can VIEW all company projects; write-access restricted per-record in update()/destroy()
+
+        // Non-admin users only see projects they own or that contain tasks they
+        // created / are Responsible for / are a Resource on.
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['projectIds']);
+        }
+
         $projects = $query->get()->map(function($proj) {
             $taskIds = Task::where('parent_type', 'project')->where('parent_id', $proj->id)->pluck('id');
             $task_count = $taskIds->count();
@@ -63,19 +70,17 @@ class ProjectController extends Controller {
     public function show(Request $request, $id) {
         $project = Project::with('owner')->findOrFail($id);
 
-        // PM can only access their own projects
-        if ($this->isPM($request)) {
-            $authUser = $request->attributes->get('auth_user');
-            if ((int)$project->owner_id !== (int)$authUser->id) {
-                return response()->json(['error' => 'Project not found'], 404);
-            }
+        // Non-admin users can only view projects within their visible scope
+        $scope = $this->visibleScope($request);
+        if ($scope !== null && !$scope['projectIds']->contains((int)$id)) {
+            return response()->json(['error' => 'Project not found'], 404);
         }
 
         $taskQuery = Task::where('parent_type', 'project')->where('parent_id', $id)
             ->with('risk', 'assignedUser')
             ->orderBy('sequence');
-        if ($this->isPM($request)) {
-            $taskQuery->where('created_by', $request->attributes->get('auth_user')->id);
+        if ($scope !== null) {
+            $taskQuery->whereIn('id', $scope['taskIds']);
         }
         $tasks = $taskQuery->get();
 

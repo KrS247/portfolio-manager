@@ -66,12 +66,16 @@ export default function ScheduleVarianceReport({ parentType, parentId }) {
 
   const blTasks = blDetail?.tasks || [];
 
-  // Compute variance for each baseline task
+  // Compute variance for each baseline task.
+  // EVM tasks may exclude milestones, so fall back to backend-provided actual dates
+  // and pre-computed variance when a task_id is absent from taskMap.
   const rows = blTasks.map(bt => {
-    const current = taskMap[bt.task_id] || {};
-    const startVar = diffDays(bt.baseline_start_date, current.start_date);
-    const endVar   = diffDays(bt.baseline_finish_date, current.due_date);
-    return { ...bt, current_start: current.start_date, current_end: current.due_date, start_var: startVar, end_var: endVar, status: current.status, pct: current.pct_complete };
+    const current      = taskMap[bt.task_id] || {};
+    const currentStart = current.start_date ?? bt.actual_start_date;
+    const currentEnd   = current.due_date   ?? bt.actual_finish_date;
+    const startVar = diffDays(bt.baseline_start_date,  currentStart) ?? bt.start_variance_days;
+    const endVar   = diffDays(bt.baseline_finish_date, currentEnd)   ?? bt.finish_variance_days;
+    return { ...bt, current_start: currentStart, current_end: currentEnd, start_var: startVar, end_var: endVar, status: current.status, pct: current.pct_complete };
   });
 
   const lateCount  = rows.filter(r => r.end_var > 0).length;
@@ -134,7 +138,7 @@ export default function ScheduleVarianceReport({ parentType, parentId }) {
                 </div>
               </Section>
 
-              <Section title={`Task Variance Details — ${blDetail.name}`}>
+              <Section title={`Task Variance Details — ${blDetail.baseline?.name}`}>
                 {loadingBl
                   ? <div style={{ color: '#6b7280', padding: '1rem' }}>Loading baseline…</div>
                   : rows.length === 0

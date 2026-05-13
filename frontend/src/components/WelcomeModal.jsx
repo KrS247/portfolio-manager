@@ -14,6 +14,7 @@ import TimelineIcon        from '@mui/icons-material/Timeline';
 import EventNoteIcon       from '@mui/icons-material/EventNote';
 import ArrowForwardIcon    from '@mui/icons-material/ArrowForward';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import AutoAwesomeIcon      from '@mui/icons-material/AutoAwesome';
 
 // ─── Data hierarchy definition ────────────────────────────────────────────────
 const HIERARCHY = [
@@ -77,7 +78,7 @@ const FEATURES = [
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function WelcomeModal({ user, onClose }) {
+export default function WelcomeModal({ user, onClose, onLaunchWizard = null }) {
   const [dontShow, setDontShow] = useState(false);
   const navigate = useNavigate();
 
@@ -107,6 +108,27 @@ export default function WelcomeModal({ user, onClose }) {
 
         {/* ── Scrollable body ─────────────────────────────────────────────── */}
         <div style={S.body}>
+
+          {/* ── Setup Wizard shortcut ───────────────────────────────────────── */}
+          {onLaunchWizard && (
+            <div style={S.wizardBanner}>
+              <AutoAwesomeIcon style={{ fontSize: 26, color: '#7c3aed', flexShrink: 0 }} />
+              <div style={S.wizardBannerText}>
+                <div style={S.wizardBannerTitle}>New here? Try the Setup Wizard</div>
+                <div style={S.wizardBannerDesc}>
+                  The Setup Wizard configures your workspace name, invites your team, and loads a
+                  complete sample portfolio — programs, projects, tasks and risks — so you can
+                  explore every feature right away.
+                </div>
+              </div>
+              <button
+                style={S.wizardBtn}
+                onClick={() => { dismiss(null); onLaunchWizard(); }}
+              >
+                Launch Wizard <ArrowForwardIcon style={{ fontSize: 15, verticalAlign: 'middle', marginLeft: 3 }} />
+              </button>
+            </div>
+          )}
 
           {/* Data Structure */}
           <div style={S.section}>
@@ -232,6 +254,13 @@ const S = {
   featureCard:   { display: 'flex', gap: '0.65rem', padding: '0.65rem 0.85rem', background: '#f9fafb', borderRadius: '8px', border: '1px solid #f0f0f0', alignItems: 'flex-start' },
   featureLabel:  { fontSize: '0.85rem', fontWeight: 700, marginBottom: '2px' },
   featureDesc:   { fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 },
+
+  // Wizard banner
+  wizardBanner:      { display: 'flex', alignItems: 'flex-start', gap: '0.85rem', background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: '10px', padding: '1rem 1.1rem' },
+  wizardBannerText:  { flex: 1, minWidth: 0 },
+  wizardBannerTitle: { fontWeight: 700, fontSize: '0.9rem', color: '#5b21b6', marginBottom: '0.3rem' },
+  wizardBannerDesc:  { fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 },
+  wizardBtn:         { flexShrink: 0, padding: '0.45rem 1rem', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '7px', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' },
 
   // Tip
   tip:           { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#166534', lineHeight: 1.5 },

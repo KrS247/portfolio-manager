@@ -13,7 +13,14 @@ class ProgramController extends Controller {
         if ($request->portfolio_id) {
             $query->where('portfolio_id', $request->portfolio_id);
         }
-        // PMs can VIEW all company programs; write-access restricted per-record in update()/destroy()
+
+        // Non-admin users only see programs they own or that contain tasks they
+        // created / are Responsible for / are a Resource on.
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['programIds']);
+        }
+
         $programs = $query->get()->map(function($prog) {
             $projectIds = Project::where('program_id', $prog->id)->pluck('id');
             $project_count = $projectIds->count();
@@ -50,9 +57,30 @@ class ProgramController extends Controller {
 
     public function show(Request $request, $id) {
         $program = Program::with('owner')->findOrFail($id);
+
+        $scope = $this->visibleScope($request);
+        if ($scope !== null && !$scope['programIds']->contains((int)$id)) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+
         $projectQuery = Project::where('program_id', $id)->with('owner');
-        $projects = $projectQuery->get();
+        if ($scope !== null) {
+            $projectQuery->whereIn('id', $scope['projectIds']);
+        }
+        $projects = $projectQuery->get()->map(function ($proj) {
+            $pct = \Illuminate\Support\Facades\DB::table('tasks')
+                ->where('parent_type', 'project')
+                ->where('parent_id', $proj->id)
+                ->avg('percent_complete') ?? 0;
+            return array_merge($proj->toArray(), [
+                'completion_percentage' => round((float)$pct, 1),
+            ]);
+        });
+
         $taskQuery = Task::where('parent_type', 'program')->where('parent_id', $id);
+        if ($scope !== null) {
+            $taskQuery->whereIn('id', $scope['taskIds']);
+        }
         $tasks = $taskQuery->get();
 
         return response()->json(array_merge($program->toArray(), [

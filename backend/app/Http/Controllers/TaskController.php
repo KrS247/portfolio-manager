@@ -21,7 +21,13 @@ class TaskController extends Controller {
         if ($request->assigned_to) $query->where('assigned_to', $request->assigned_to);
         if ($request->status)      $query->where('status',      $request->status);
 
-        // PMs can VIEW all company tasks; write-access restricted per-record in update()/destroy()
+        // Non-admin users only see tasks they created, are Responsible for, or
+        // are listed as a Resource on.
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['taskIds']);
+        }
+
         $tasks = $query->orderBy('sequence')->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
     }
@@ -29,6 +35,12 @@ class TaskController extends Controller {
     // ── Detail ────────────────────────────────────────────────────────────────
     public function show(Request $request, $id) {
         $task = Task::with(['risk', 'assignedUser'])->findOrFail($id);
+
+        $scope = $this->visibleScope($request);
+        if ($scope !== null && !$scope['taskIds']->contains((int)$id)) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+
         return response()->json($this->formatTask($task));
     }
 
@@ -36,6 +48,11 @@ class TaskController extends Controller {
     public function highRisk(Request $request) {
         $query = Task::whereHas('risk', fn($q) => $q->where('risk_rate', '>', 10))
             ->with(['risk', 'assignedUser']);
+
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['taskIds']);
+        }
 
         $tasks = $query->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
@@ -48,6 +65,11 @@ class TaskController extends Controller {
             ->where('due_date', '<', now()->toDateString())
             ->with(['risk', 'assignedUser']);
 
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['taskIds']);
+        }
+
         $tasks = $query->get()->map(fn($t) => $this->formatTask($t));
         return response()->json($tasks);
     }
@@ -56,6 +78,11 @@ class TaskController extends Controller {
     public function overBudget(Request $request) {
         $query = Task::whereHas('resources', fn($q) => $q->whereRaw('actual_hours > estimated_hours'))
             ->with(['risk', 'assignedUser', 'resources.user']);
+
+        $scope = $this->visibleScope($request);
+        if ($scope !== null) {
+            $query->whereIn('id', $scope['taskIds']);
+        }
 
         $tasks = $query->get()->map(function($t) {
             $base = $this->formatTask($t);
@@ -325,12 +352,10 @@ class TaskController extends Controller {
     public function subtasks(Request $request, $id) {
         $task = Task::findOrFail($id);
 
-        // PM must own the parent task to see its subtasks
-        if ($this->isPM($request)) {
-            $authUser = $request->attributes->get('auth_user');
-            if ((int)$task->created_by !== (int)$authUser->id) {
-                return response()->json(['error' => 'Task not found'], 404);
-            }
+        // Non-admin users can only view subtasks when they can see the parent task
+        $scope = $this->visibleScope($request);
+        if ($scope !== null && !$scope['taskIds']->contains((int)$id)) {
+            return response()->json(['error' => 'Task not found'], 404);
         }
 
         $children = Task::with(['risk', 'assignedUser'])

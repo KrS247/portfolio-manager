@@ -38,6 +38,8 @@ export default function Tasks() {
   const { data: users } = useApi('/users');
   const [editTask, setEditTask]     = useState(null);
   const [deleteTask, setDeleteTask] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError]   = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
@@ -93,7 +95,20 @@ export default function Tasks() {
   }, [filtered, sortCol, sortDir]);
 
   const handleSave = () => { setEditTask(null); setShowNewForm(false); refetch(); };
-  const handleDelete = async () => { await client.delete(`/tasks/${deleteTask.id}`); setDeleteTask(null); refetch(); };
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await client.delete(`/tasks/${deleteTask.id}`);
+      setDeleteTask(null);
+      refetch();
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete task. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+  const handleDeleteCancel = () => { setDeleteTask(null); setDeleteError(null); };
 
   const getHierarchyLabel = (task) => {
     const parts = [task.portfolio_name, task.program_name, task.project_name].filter(Boolean);
@@ -311,7 +326,13 @@ export default function Tasks() {
         <TaskForm parentType={editTask.parent_type} parentId={editTask.parent_id} task={editTask} users={users || []} onSave={handleSave} onCancel={() => setEditTask(null)} />
       )}
       {deleteTask && (
-        <ConfirmDialog message={`Delete task "${deleteTask.title}"?`} onConfirm={handleDelete} onCancel={() => setDeleteTask(null)} />
+        <ConfirmDialog
+          message={`Delete task "${deleteTask.title}"?`}
+          onConfirm={handleDelete}
+          onCancel={handleDeleteCancel}
+          loading={deleteLoading}
+          error={deleteError}
+        />
       )}
     </div>
   );

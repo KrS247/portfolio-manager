@@ -185,7 +185,9 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('onboarding/status',      [OnboardingController::class, 'status']);
     Route::post('onboarding/workspace',  [OnboardingController::class, 'updateWorkspace']);
     Route::post('onboarding/invite',     [OnboardingController::class, 'inviteUser']);
-    Route::post('onboarding/sample-data',[OnboardingController::class, 'loadSampleData']);
+    Route::get('onboarding/sample-data',   [OnboardingController::class, 'sampleDataStatus']);
+    Route::post('onboarding/sample-data',  [OnboardingController::class, 'loadSampleData']);
+    Route::delete('onboarding/sample-data',[OnboardingController::class, 'deleteSampleData']);
     Route::post('onboarding/complete',   [OnboardingController::class, 'complete']);
 
     // AI Chat (OpenAI-powered)

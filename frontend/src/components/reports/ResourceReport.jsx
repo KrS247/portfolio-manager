@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import client from '../../api/client';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -62,8 +62,8 @@ export default function ResourceReport({ parentType, parentId }) {
 
   const totalEst   = resources.reduce((a, r) => a + r.estimated_hours, 0);
   const totalAct   = resources.reduce((a, r) => a + r.actual_hours, 0);
-  const totalEstC  = resources.reduce((a, r) => a + r.estimated_cost, 0);
-  const totalActC  = resources.reduce((a, r) => a + r.actual_cost, 0);
+  const totalEstC  = resources.reduce((a, r) => a + (r.estimated_cost ?? 0), 0);
+  const totalActC  = resources.reduce((a, r) => a + (r.actual_cost  ?? 0), 0);
   const overBudget = resources.filter(r => r.over_budget).length;
   const maxHours   = Math.max(...resources.map(r => Math.max(r.estimated_hours, r.actual_hours)));
 
@@ -118,9 +118,8 @@ export default function ResourceReport({ parentType, parentId }) {
           </thead>
           <tbody>
             {resources.map((r, i) => (
-              <>
+              <Fragment key={r.user_id || i}>
                 <tr
-                  key={r.user_id || i}
                   style={{ background: r.over_budget ? '#fff5f5' : i % 2 === 0 ? '#fff' : '#f9fafb', cursor: r.tasks?.length > 0 ? 'pointer' : 'default' }}
                   onClick={() => r.tasks?.length > 0 && toggle(r.user_id || i)}
                 >
@@ -164,7 +163,7 @@ export default function ResourceReport({ parentType, parentId }) {
                     <td style={{ padding: '0.4rem 0.75rem', borderBottom: '1px solid #f3f4f6' }} />
                   </tr>
                 ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

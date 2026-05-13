@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Task;
 
 class TaskResource extends Model {
     protected $table = 'task_resources';
@@ -8,4 +9,5 @@ class TaskResource extends Model {
     protected $fillable = ['task_id', 'user_id', 'estimated_hours', 'actual_hours'];
 
     public function user() { return $this->belongsTo(User::class, 'user_id'); }
+    public function task() { return $this->belongsTo(Task::class, 'task_id'); }
 }

@@ -19,6 +19,10 @@ use App\Models\User;
  *   5. complete        — mark onboarding as done
  *
  * All routes require jwt.auth middleware (applied in routes/api.php).
+ * NOTE: use $this->getAuthUser($request) — NOT auth()->user() — to
+ * retrieve the authenticated user.  The app's JwtAuthenticate middleware stores
+ * the full Eloquent user (with company_id) on the request attributes; calling
+ * auth()->user() returns only the bare JWT subject and lacks company_id.
  */
 class OnboardingController extends Controller
 {
@@ -29,10 +33,10 @@ class OnboardingController extends Controller
      *
      * Returns whether the authenticated user's company still needs onboarding.
      */
-    public function status()
+    public function status(Request $request)
     {
-        $user    = auth()->user();
-        $company = $user->company;
+        $user    = $this->getAuthUser($request);
+        $company = $user ? Company::find($user->company_id) : null;
 
         $needsOnboarding = $company ? !(bool) $company->onboarding_completed : false;
 
@@ -52,7 +56,7 @@ class OnboardingController extends Controller
             'company_name' => 'required|string|max:255',
         ]);
 
-        $user    = auth()->user();
+        $user    = $this->getAuthUser($request);
         $company = Company::find($user->company_id);
 
         if (!$company) {
@@ -84,7 +88,7 @@ class OnboardingController extends Controller
             'temp_password' => 'required|string|min:8',
         ]);
 
-        $authUser = auth()->user();
+        $authUser = $this->getAuthUser($request);
 
         $role = Role::where('name', $data['role'])->first();
 
@@ -109,7 +113,27 @@ class OnboardingController extends Controller
         ], 201);
     }
 
-    // ── 4. Load sample data ───────────────────────────────────────────────────
+    // ── 4a. Sample-data status ────────────────────────────────────────────────
+
+    /**
+     * GET /api/onboarding/sample-data
+     *
+     * Returns whether sample data has already been loaded for this company.
+     */
+    public function sampleDataStatus(Request $request)
+    {
+        $user    = $this->getAuthUser($request);
+        $company = Company::find($user->company_id);
+
+        $loaded = !is_null($company?->sample_data_portfolio_id);
+
+        return response()->json([
+            'loaded'       => $loaded,
+            'portfolio_id' => $company?->sample_data_portfolio_id,
+        ]);
+    }
+
+    // ── 4b. Load sample data ──────────────────────────────────────────────────
 
     /**
      * POST /api/onboarding/sample-data
@@ -117,14 +141,22 @@ class OnboardingController extends Controller
      * Inserts a complete demo hierarchy (portfolio → programs → projects → tasks)
      * scoped to the current user's company. Uses DB::table() to bypass model
      * events and avoid BelongsToTenant scope interference during bulk insert.
+     * Returns 409 if sample data has already been loaded.
      */
-    public function loadSampleData()
+    public function loadSampleData(Request $request)
     {
-        $user      = auth()->user();
+        $user      = $this->getAuthUser($request);
+        $company   = Company::find($user->company_id);
         $companyId = $user->company_id;
         $userId    = $user->id;
-        $today     = now()->format('Y-m-d');
-        $now       = now()->toDateTimeString();
+
+        // Prevent double-loading
+        if ($company && !is_null($company->sample_data_portfolio_id)) {
+            return response()->json(['error' => 'Sample data has already been loaded'], 409);
+        }
+
+        $today = now()->format('Y-m-d');
+        $now   = now()->toDateTimeString();
 
         // ── Portfolio ─────────────────────────────────────────────────────────
         $portfolioId = DB::table('portfolios')->insertGetId([
@@ -162,10 +194,10 @@ class OnboardingController extends Controller
             'updated_at' => $now,
         ]);
 
-        $this->insertTask($companyId, $userId, $projectWebId, 'Design wireframes',     'complete',     100, $today, 3);
-        $this->insertTask($companyId, $userId, $projectWebId, 'Build frontend',        'in_progress',   60, $today, 5);
-        $this->insertTask($companyId, $userId, $projectWebId, 'API integration',       'not_started',    0, $today, 4);
-        $this->insertTask($companyId, $userId, $projectWebId, 'User testing & launch', 'not_started',    0, $today, 3);
+        $this->insertTask($companyId, $userId, $projectWebId, 'Design wireframes',     'completed',  100, $today, 3);
+        $this->insertTask($companyId, $userId, $projectWebId, 'Build frontend',        'in_progress', 60, $today, 5);
+        $this->insertTask($companyId, $userId, $projectWebId, 'API integration',       'open',         0, $today, 4);
+        $this->insertTask($companyId, $userId, $projectWebId, 'User testing & launch', 'open',         0, $today, 3);
 
         // ── Project: Mobile App Launch ────────────────────────────────────────
         $projectMobileId = DB::table('projects')->insertGetId([
@@ -179,9 +211,9 @@ class OnboardingController extends Controller
             'updated_at' => $now,
         ]);
 
-        $this->insertTask($companyId, $userId, $projectMobileId, 'Requirements gathering', 'complete',    100, $today, 2);
-        $this->insertTask($companyId, $userId, $projectMobileId, 'Development sprint 1',   'in_progress',  35, $today, 10);
-        $this->insertTask($companyId, $userId, $projectMobileId, 'QA & release',           'not_started',   0, $today, 5);
+        $this->insertTask($companyId, $userId, $projectMobileId, 'Requirements gathering', 'completed',  100, $today, 2);
+        $this->insertTask($companyId, $userId, $projectMobileId, 'Development sprint 1',   'in_progress', 35, $today, 10);
+        $this->insertTask($companyId, $userId, $projectMobileId, 'QA & release',           'open',         0, $today, 5);
 
         // ── Program: Infrastructure ───────────────────────────────────────────
         $programInfraId = DB::table('programs')->insertGetId([
@@ -207,9 +239,15 @@ class OnboardingController extends Controller
             'updated_at' => $now,
         ]);
 
-        $this->insertTask($companyId, $userId, $projectCloudId, 'Audit current systems', 'complete',    100, $today, 2);
-        $this->insertTask($companyId, $userId, $projectCloudId, 'Design architecture',   'in_progress',  50, $today, 5);
-        $this->insertTask($companyId, $userId, $projectCloudId, 'Migrate services',      'not_started',   0, $today, 8);
+        $this->insertTask($companyId, $userId, $projectCloudId, 'Audit current systems', 'completed',  100, $today, 2);
+        $this->insertTask($companyId, $userId, $projectCloudId, 'Design architecture',   'in_progress', 50, $today, 5);
+        $this->insertTask($companyId, $userId, $projectCloudId, 'Migrate services',      'open',         0, $today, 8);
+
+        // Record which portfolio belongs to the sample data so we can delete it later
+        if ($company) {
+            $company->sample_data_portfolio_id = $portfolioId;
+            $company->save();
+        }
 
         return response()->json([
             'success'      => true,
@@ -218,17 +256,65 @@ class OnboardingController extends Controller
         ]);
     }
 
+    // ── 4c. Delete sample data ────────────────────────────────────────────────
+
+    /**
+     * DELETE /api/onboarding/sample-data
+     *
+     * Removes the entire sample-data hierarchy (portfolio, programs, projects,
+     * tasks, risks, resources, dependencies) and clears the tracking flag.
+     */
+    public function deleteSampleData(Request $request)
+    {
+        $user    = $this->getAuthUser($request);
+        $company = Company::find($user->company_id);
+
+        if (!$company || is_null($company->sample_data_portfolio_id)) {
+            return response()->json(['error' => 'No sample data found'], 404);
+        }
+
+        $portfolioId = $company->sample_data_portfolio_id;
+
+        // Collect IDs top-down so we can clean related tables first
+        $programIds = DB::table('programs')->where('portfolio_id', $portfolioId)->pluck('id');
+        $projectIds = DB::table('projects')->whereIn('program_id', $programIds)->pluck('id');
+
+        // All task IDs across every parent level in this portfolio
+        $taskIds = DB::table('tasks')
+            ->where(function ($q) use ($portfolioId, $programIds, $projectIds) {
+                $q->where(function ($q2) use ($portfolioId) {
+                    $q2->where('parent_type', 'portfolio')->where('parent_id', $portfolioId);
+                })->orWhere(function ($q2) use ($programIds) {
+                    $q2->where('parent_type', 'program')->whereIn('parent_id', $programIds);
+                })->orWhere(function ($q2) use ($projectIds) {
+                    $q2->where('parent_type', 'project')->whereIn('parent_id', $projectIds);
+                });
+            })
+            ->pluck('id');
+
+        // Delete child records before tasks (no guaranteed FK cascade in SQLite)
+        DB::table('risks')->whereIn('task_id', $taskIds)->delete();
+        DB::table('task_resources')->whereIn('task_id', $taskIds)->delete();
+        DB::table('task_dependencies')
+            ->whereIn('task_id', $taskIds)
+            ->orWhereIn('depends_on', $taskIds)
+            ->delete();
+
+        // Delete the hierarchy bottom-up
+        DB::table('tasks')->whereIn('id', $taskIds)->delete();
+        DB::table('projects')->whereIn('id', $projectIds)->delete();
+        DB::table('programs')->whereIn('id', $programIds)->delete();
+        DB::table('portfolios')->where('id', $portfolioId)->delete();
+
+        // Clear the tracking flag
+        $company->sample_data_portfolio_id = null;
+        $company->save();
+
+        return response()->json(['success' => true, 'message' => 'Sample data deleted']);
+    }
+
     /**
      * Insert a single task row via DB::table() (bypasses BelongsToTenant scope).
-     *
-     * @param  int    $companyId
-     * @param  int    $userId
-     * @param  int    $projectId
-     * @param  string $title
-     * @param  string $status
-     * @param  int    $percentComplete
-     * @param  string $today           Y-m-d string used as start_date
-     * @param  int    $durationDays
      */
     private function insertTask(
         int    $companyId,
@@ -240,16 +326,15 @@ class OnboardingController extends Controller
         string $today,
         int    $durationDays
     ): void {
-        $startDate = $today;
-        $dueDate   = now()->addDays($durationDays)->format('Y-m-d');
-        $now       = now()->toDateTimeString();
+        $dueDate = now()->addDays($durationDays)->format('Y-m-d');
+        $now     = now()->toDateTimeString();
 
         DB::table('tasks')->insert([
             'company_id'       => $companyId,
             'title'            => $title,
             'status'           => $status,
             'percent_complete' => $percentComplete,
-            'start_date'       => $startDate,
+            'start_date'       => $today,
             'due_date'         => $dueDate,
             'duration_days'    => $durationDays,
             'parent_type'      => 'project',
@@ -268,9 +353,9 @@ class OnboardingController extends Controller
      *
      * Marks the user's company as having finished onboarding.
      */
-    public function complete()
+    public function complete(Request $request)
     {
-        $user    = auth()->user();
+        $user    = $this->getAuthUser($request);
         $company = Company::find($user->company_id);
 
         if (!$company) {
