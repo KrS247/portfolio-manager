@@ -98,6 +98,27 @@ export default function Dashboard() {
     return projects.reduce((acc, pj) => { acc[pj.id] = programToPortfolio[pj.program_id]; return acc; }, {});
   }, [projects, programToPortfolio]);
 
+  // Lookup maps for task project/program names
+  const projectMap = useMemo(() => {
+    if (!projects) return {};
+    return projects.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+  }, [projects]);
+
+  const programMap = useMemo(() => {
+    if (!programs) return {};
+    return programs.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+  }, [programs]);
+
+  const taskProjectName = (t) =>
+    t.project_name || projectMap[t.project_id]?.name || null;
+
+  const taskProgramName = (t) => {
+    if (t.program_name) return t.program_name;
+    if (t.program_id)   return programMap[t.program_id]?.name || null;
+    const proj = projectMap[t.project_id];
+    return proj ? (programMap[proj.program_id]?.name || null) : null;
+  };
+
   const taskPortfolioId = (task) => {
     if (task.portfolio_id != null) return task.portfolio_id;
     // fallback to lookup maps for tasks without direct portfolio_id
@@ -241,23 +262,47 @@ export default function Dashboard() {
           </div>
           {tLoad && <div style={styles.widgetEmpty}>Loading…</div>}
           {!tLoad && myTasks.length === 0 && <div style={styles.widgetEmpty}>No open tasks assigned to you 🎉</div>}
-          <div style={styles.widgetScroll}>
-            {myTasks.map(t => (
-              <Link key={t.id} to={taskUrl(t)} style={styles.widgetRow}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>
-                    <span style={{ ...styles.statusPill, ...statusStyle(t.status), fontSize: '0.7rem', padding: '1px 6px' }}>{t.status.replace('_', ' ')}</span>
-                    {t.due_date && <span style={{ marginLeft: 6, color: isOverdue(t.due_date) ? '#dc2626' : '#6b7280' }}>
-                      {isOverdue(t.due_date) ? '⚠ ' : ''}Due {t.due_date}
-                    </span>}
+          <div style={styles.riskList}>
+            {myTasks.map(t => {
+              const overdue = isOverdue(t.due_date);
+              const days    = daysUntil(t.due_date);
+              const c = overdue
+                ? { bg: '#fef2f2', border: '#dc2626', text: '#991b1b' }
+                : days !== null && days <= 7
+                ? { bg: '#fff7ed', border: '#ea580c', text: '#9a3412' }
+                : t.status === 'in_progress'
+                ? { bg: '#eff6ff', border: '#3b82f6', text: '#1e40af' }
+                : { bg: '#f9fafb', border: '#9ca3af', text: '#374151' };
+              const projName = taskProjectName(t);
+              const progName = taskProgramName(t);
+              return (
+                <Link key={t.id} to={taskUrl(t)} style={{ ...styles.riskRow, background: c.bg, borderLeft: `4px solid ${c.border}`, textDecoration: 'none', color: 'inherit' }}>
+                  <div style={styles.riskInfo}>
+                    <div style={styles.riskTitle}>{t.title}</div>
+                    <div style={styles.riskMeta}>
+                      <span style={{ ...styles.statusPill, ...statusStyle(t.status), fontSize: '0.7rem', padding: '1px 6px' }}>{t.status.replace('_', ' ')}</span>
+                      {t.due_date && (
+                        <span style={{ fontSize: '0.78rem', color: c.text, fontWeight: 600 }}>
+                          {overdue ? '⚠ ' : ''}Due {t.due_date}
+                        </span>
+                      )}
+                      {projName && <><span style={styles.riskSep}>·</span><span style={styles.riskLink}>{projName}</span></>}
+                      {progName && <><span style={styles.riskSep}>·</span><span style={{ ...styles.riskLink, color: '#6b7280' }}>{progName}</span></>}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#9ca3af', flexShrink: 0 }}>
-                  {t.percent_complete}%
-                </div>
-              </Link>
-            ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+                    <span style={{ ...styles.riskStatus, color: c.text, background: c.border + '22', border: `1px solid ${c.border}66` }}>
+                      {t.percent_complete ?? 0}%
+                    </span>
+                    {t.priority != null && (
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '999px', padding: '1px 7px' }}>
+                        P{t.priority}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -269,19 +314,29 @@ export default function Dashboard() {
           </div>
           {tLoad && <div style={styles.widgetEmpty}>Loading…</div>}
           {!tLoad && upcomingMilestones.length === 0 && <div style={styles.widgetEmpty}>No milestones in the next 60 days.</div>}
-          <div style={styles.widgetScroll}>
+          <div style={styles.riskList}>
             {upcomingMilestones.map(t => {
               const days = daysUntil(t.due_date);
+              const c = days <= 7
+                ? { bg: '#fef2f2', border: '#dc2626', text: '#991b1b' }
+                : days <= 14
+                ? { bg: '#fff7ed', border: '#ea580c', text: '#9a3412' }
+                : { bg: '#f0fdf4', border: '#16a34a', text: '#166534' };
+              const projName = taskProjectName(t);
+              const progName = taskProgramName(t);
+              const dayLabel = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days}d`;
               return (
-                <Link key={t.id} to={taskUrl(t)} style={styles.widgetRow}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>{t.due_date}</div>
+                <Link key={t.id} to={taskUrl(t)} style={{ ...styles.riskRow, background: c.bg, borderLeft: `4px solid ${c.border}`, textDecoration: 'none', color: 'inherit' }}>
+                  <div style={styles.riskInfo}>
+                    <div style={styles.riskTitle}>◆ {t.title}</div>
+                    <div style={styles.riskMeta}>
+                      <span style={{ fontSize: '0.78rem', color: c.text, fontWeight: 600 }}>Due {t.due_date}</span>
+                      {projName && <><span style={styles.riskSep}>·</span><span style={styles.riskLink}>{projName}</span></>}
+                      {progName && <><span style={styles.riskSep}>·</span><span style={{ ...styles.riskLink, color: '#6b7280' }}>{progName}</span></>}
+                    </div>
                   </div>
-                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: days <= 7 ? '#dc2626' : days <= 14 ? '#d97706' : '#059669', background: days <= 7 ? '#fee2e2' : days <= 14 ? '#fef3c7' : '#f0fdf4', padding: '2px 7px', borderRadius: 10 }}>
-                      {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days}d`}
-                    </span>
+                  <div style={{ ...styles.riskStatus, color: c.text, background: c.border + '22', border: `1px solid ${c.border}66` }}>
+                    {dayLabel}
                   </div>
                 </Link>
               );
