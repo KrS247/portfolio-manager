@@ -336,7 +336,12 @@ function WeekView({ anchor, today, tasksOnDay, navigate }) {
 function DayView({ anchor, today, tasksOnDay, navigate }) {
   const dateStr  = toYMD(anchor);
   const isToday  = dateStr === today;
-  const dayTasks = tasksOnDay(dateStr);
+  const dayTasks = [...tasksOnDay(dateStr)].sort((a, b) => {
+    const ca = a.status === 'completed' ? 1 : 0;
+    const cb = b.status === 'completed' ? 1 : 0;
+    if (ca !== cb) return ca - cb;
+    return (b.priority ?? -Infinity) - (a.priority ?? -Infinity);
+  });
 
   return (
     <div style={S.dayViewWrap}>

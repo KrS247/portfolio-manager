@@ -130,6 +130,25 @@ export default function WelcomeModal({ user, onClose, onLaunchWizard = null }) {
             </div>
           )}
 
+          {/* Features */}
+          <div style={S.section}>
+            <div style={S.sectionTitle}>Key features</div>
+            <div style={S.featureGrid}>
+              {FEATURES.map(f => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.label} style={S.featureCard}>
+                    <Icon style={{ fontSize: 22, color: f.color, flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <div style={{ ...S.featureLabel, color: f.color }}>{f.label}</div>
+                      <div style={S.featureDesc}>{f.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Data Structure */}
           <div style={S.section}>
             <div style={S.sectionTitle}>How the data is structured</div>
@@ -161,25 +180,6 @@ export default function WelcomeModal({ user, onClose, onLaunchWizard = null }) {
                         <span style={{ ...S.hierarchyLabel, color: item.color }}>{item.label}</span>
                         <span style={S.hierarchyDesc}>{item.desc}</span>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Features */}
-          <div style={S.section}>
-            <div style={S.sectionTitle}>Key features</div>
-            <div style={S.featureGrid}>
-              {FEATURES.map(f => {
-                const Icon = f.icon;
-                return (
-                  <div key={f.label} style={S.featureCard}>
-                    <Icon style={{ fontSize: 22, color: f.color, flexShrink: 0, marginTop: 1 }} />
-                    <div>
-                      <div style={{ ...S.featureLabel, color: f.color }}>{f.label}</div>
-                      <div style={S.featureDesc}>{f.desc}</div>
                     </div>
                   </div>
                 );

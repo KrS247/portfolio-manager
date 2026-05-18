@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../../api/client';
+import GanttChart from '../GanttChart';
 
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtN = (n, dp = 2) => n == null ? '—' : Number(n).toFixed(dp);
@@ -127,6 +128,22 @@ export default function ProjectReport({ parentType, parentId }) {
               ))}
             </tbody>
           </table>
+        </Section>
+      )}
+
+      {/* Task Timeline (Gantt) */}
+      {(project.tasks || []).filter(t => t.start_date && t.due_date).length > 0 && (
+        <Section title="Task Timeline">
+          <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+            <GanttChart
+              items={project.tasks}
+              nameField="title"
+              endDateField="due_date"
+              timeUnit="month"
+              canEdit={false}
+              showCriticalPath={true}
+            />
+          </div>
         </Section>
       )}
 

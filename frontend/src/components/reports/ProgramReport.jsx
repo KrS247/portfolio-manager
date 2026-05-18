@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import client from '../../api/client';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import GanttChart from '../GanttChart';
 
 const fmt = (n) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtN = (n, dp = 2) => n == null ? '—' : Number(n).toFixed(dp);
@@ -158,6 +159,22 @@ export default function ProgramReport({ parentType, parentId }) {
               ))}
             </tbody>
           </table>
+        </Section>
+      )}
+
+      {/* Project Timeline (Gantt) */}
+      {projects.filter(p => p.start_date && p.end_date).length > 0 && (
+        <Section title="Project Timeline">
+          <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+            <GanttChart
+              items={projects}
+              nameField="name"
+              endDateField="end_date"
+              timeUnit="month"
+              canEdit={false}
+              showCriticalPath={false}
+            />
+          </div>
         </Section>
       )}
 
