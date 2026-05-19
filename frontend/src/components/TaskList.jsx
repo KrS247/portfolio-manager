@@ -80,7 +80,7 @@ function TaskNode({ task, depth, canEdit, onEdit, onDelete, onAddSubtask, expand
             <PriorityBadge priority={task.priority} />
             <div style={{ flex: 1 }}>
               <div style={styles.taskTitle}>
-                {task.is_milestone && (
+                {!!task.is_milestone && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fef3c7', color: '#b45309', fontSize: '0.68rem', fontWeight: 800, padding: '1px 6px', borderRadius: 4, border: '1px solid #fde68a', marginRight: 6, letterSpacing: '0.04em', verticalAlign: 'middle' }}>
                     <StarBorderIcon style={{ fontSize: 11 }} />MILESTONE
                   </span>
@@ -149,7 +149,7 @@ function TaskNode({ task, depth, canEdit, onEdit, onDelete, onAddSubtask, expand
   );
 }
 
-export default function TaskList({ tasks, parentType, parentId, canEdit, canAdd = true, onRefresh, users = [] }) {
+export default function TaskList({ tasks, parentType, parentId, canEdit, canAdd = true, onRefresh, users = [], isAgile = false, sprints = [], agilePhases = [] }) {
   const [view, setView]           = useState('list');
   const [showForm, setShowForm]   = useState(false);
   const [editTask, setEditTask]   = useState(null);
@@ -265,6 +265,9 @@ export default function TaskList({ tasks, parentType, parentId, canEdit, canAdd 
           parentTaskId={subtaskParent ? subtaskParent.id : (editTask?.parent_task_id ?? null)}
           tasks={tasks}
           users={users}
+          isAgile={isAgile}
+          sprints={sprints}
+          agilePhases={agilePhases}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditTask(null); setSubtaskParent(null); }}
         />

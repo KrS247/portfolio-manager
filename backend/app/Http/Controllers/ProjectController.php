@@ -107,6 +107,7 @@ class ProjectController extends Controller {
             'end_date'    => 'nullable|date',
             'owner_id'    => 'nullable|integer|exists:users,id',
             'clickup_id'  => 'nullable|string|max:100',
+            'is_agile'    => 'nullable|boolean',
         ]);
 
         if ($this->isPM($request)) {
@@ -126,9 +127,9 @@ class ProjectController extends Controller {
                 return response()->json(['error' => 'You can only edit your own projects'], 403);
             }
             // PM cannot reassign ownership
-            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'clickup_id']);
+            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'clickup_id', 'is_agile']);
         } else {
-            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id']);
+            $fields = $request->only(['program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id', 'is_agile']);
         }
 
         $project->update($fields);

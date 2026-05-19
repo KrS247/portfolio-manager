@@ -122,6 +122,9 @@ class TaskController extends Controller {
             'parent_type'     => 'required|in:portfolio,program,project',
             'parent_id'       => 'required|integer',
             'parent_task_id'  => 'nullable|integer|exists:tasks,id',
+            'sprint_id'       => 'nullable|integer|exists:sprints,id',
+            'task_type'       => 'nullable|in:feature,bug_fix',
+            'agile_phase_id'  => 'nullable|integer|exists:agile_phases,id',
         ]);
 
         $maxSeq = Task::where('parent_type', $data['parent_type'])
@@ -179,6 +182,9 @@ class TaskController extends Controller {
             'recurrence_type'     => 'nullable|in:daily,weekly,monthly,yearly',
             'recurrence_interval' => 'nullable|integer|min:1|max:365',
             'recurrence_end_date' => 'nullable|date',
+            'sprint_id'           => 'nullable|integer|exists:sprints,id',
+            'task_type'           => 'nullable|in:feature,bug_fix',
+            'agile_phase_id'      => 'nullable|integer|exists:agile_phases,id',
         ]);
 
         $oldStart  = $task->start_date;
@@ -192,6 +198,7 @@ class TaskController extends Controller {
             'parent_type', 'parent_id', 'parent_task_id',
             'constraint_type', 'constraint_date', 'schedule_mode',
             'recurrence_type', 'recurrence_interval', 'recurrence_end_date',
+            'sprint_id', 'task_type', 'agile_phase_id',
         ]));
 
         // Build a diff of human-visible changes for the activity log

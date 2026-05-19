@@ -36,7 +36,7 @@ function getActivityColor(action) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function TaskForm({ parentType, parentId, task, parentTaskId = null, tasks = [], onSave, onCancel, users = [] }) {
+export default function TaskForm({ parentType, parentId, task, parentTaskId = null, tasks = [], onSave, onCancel, users = [], isAgile = false, sprints = [], agilePhases = [], defaultSprintId = null, defaultPhaseId = null }) {
   const [activeTab, setActiveTab] = useState('task');
 
   // ── Comments & Activity state ────────────────────────────────────────────
@@ -107,6 +107,14 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
     recurrence_end_date: task?.recurrence_end_date || '',
   });
   const setRecur = (k, v) => setRecurForm(f => ({ ...f, [k]: v }));
+
+  // ── Agile form state ─────────────────────────────────────────────────────
+  const [agileForm, setAgileForm] = useState({
+    sprint_id:      task?.sprint_id      ?? defaultSprintId ?? '',
+    task_type:      task?.task_type      ?? '',
+    agile_phase_id: task?.agile_phase_id ?? defaultPhaseId  ?? '',
+  });
+  const setAgile = (k, v) => setAgileForm(f => ({ ...f, [k]: v }));
 
   // Read-only CPM fields (display only)
   const cpmFields = task ? {
@@ -291,6 +299,9 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
         recurrence_type:      recurForm.recurrence_type !== 'none' ? recurForm.recurrence_type : null,
         recurrence_interval:  recurForm.recurrence_interval || 1,
         recurrence_end_date:  recurForm.recurrence_end_date || null,
+        sprint_id:            agileForm.sprint_id      ? parseInt(agileForm.sprint_id)      : null,
+        task_type:            agileForm.task_type      || null,
+        agile_phase_id:       agileForm.agile_phase_id ? parseInt(agileForm.agile_phase_id) : null,
       };
       const { data: savedTask } = task
         ? await client.put(`/tasks/${task.id}`, payload)
@@ -423,7 +434,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
           </button>
           <button
             type="button"
-            style={{ ...styles.tab, ...(activeTab === 'comments' ? styles.tabActive : {}), borderRight: 'none' }}
+            style={{ ...styles.tab, ...(activeTab === 'comments' ? styles.tabActive : {}), ...(isAgile ? {} : { borderRight: 'none' }) }}
             onClick={() => setActiveTab('comments')}
           >
             <ForumIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Comments
@@ -431,6 +442,20 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               <span style={{ ...styles.tabBadge, background: activeTab === 'comments' ? 'rgba(255,255,255,0.25)' : '#ede9fe', color: activeTab === 'comments' ? '#fff' : '#7c3aed' }}>{comments.length}</span>
             )}
           </button>
+          {isAgile && (
+            <button
+              type="button"
+              style={{ ...styles.tab, ...(activeTab === 'agile' ? styles.tabActive : {}), borderRight: 'none', ...(activeTab !== 'agile' ? { color: '#7c3aed' } : {}) }}
+              onClick={() => setActiveTab('agile')}
+            >
+              🏃 Agile
+              {agileForm.task_type && (
+                <span style={{ ...styles.tabBadge, background: activeTab === 'agile' ? 'rgba(255,255,255,0.25)' : '#ede9fe', color: activeTab === 'agile' ? '#fff' : '#7c3aed' }}>
+                  {agileForm.task_type === 'feature' ? '★' : '🐛'}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {error && <div style={styles.error}>{error}</div>}
@@ -1015,6 +1040,56 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                     </div>
                   ))}
                 </div>
+              )}
+            </>
+          )}
+
+          {/* ════════════════════════════════ AGILE TAB ══════════ */}
+          {activeTab === 'agile' && (
+            <>
+              <p style={styles.riskHint}>
+                Configure agile-specific settings for this task. Assign it to a sprint, select the type, and place it in the correct workflow column.
+              </p>
+
+              {/* Task Type */}
+              <label style={styles.label}>Task Type</label>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                {[['', 'None'], ['feature', '★ Feature'], ['bug_fix', '🐛 Bug Fix']].map(([val, label]) => (
+                  <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.5rem 0.9rem', borderRadius: 8, border: `1.5px solid ${agileForm.task_type === val ? '#6d28d9' : '#e5e7eb'}`, background: agileForm.task_type === val ? '#f5f3ff' : '#f9fafb', fontWeight: agileForm.task_type === val ? 700 : 500, color: agileForm.task_type === val ? '#6d28d9' : '#374151', fontSize: '0.88rem', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}>
+                    <input type="radio" name="task_type" value={val} checked={agileForm.task_type === val} onChange={() => setAgile('task_type', val)} style={{ display: 'none' }} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              {/* Sprint */}
+              <label style={styles.label}>Sprint</label>
+              {sprints.length === 0 ? (
+                <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                  No sprints available — create sprints in Admin → Agile Projects → Sprint Management.
+                </div>
+              ) : (
+                <select style={styles.input} value={agileForm.sprint_id} onChange={e => setAgile('sprint_id', e.target.value)}>
+                  <option value="">— No Sprint —</option>
+                  {sprints.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.start_date})</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Phase / Column */}
+              <label style={styles.label}>Board Column (Phase)</label>
+              {agilePhases.length === 0 ? (
+                <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                  No phases configured — create phases in Admin → Agile Projects → Agile Phases.
+                </div>
+              ) : (
+                <select style={styles.input} value={agileForm.agile_phase_id} onChange={e => setAgile('agile_phase_id', e.target.value)}>
+                  <option value="">— Unassigned —</option>
+                  {agilePhases.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               )}
             </>
           )}

@@ -33,6 +33,7 @@ function ProjectForm({ programId, project, onSave, onCancel }) {
     start_date:  project?.start_date  || '',
     end_date:    project?.end_date    || '',
     clickup_id:  project?.clickup_id  || '',
+    is_agile:    project?.is_agile    || false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -99,6 +100,19 @@ function ProjectForm({ programId, project, onSave, onCancel }) {
           <p style={{ margin: '0.25rem 0 0.75rem', fontSize: '0.74rem', color: '#9ca3af' }}>
             Paste the ClickUp task ID to link this project and sync status, comments &amp; risks.
           </p>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', padding: '0.6rem 0.75rem', background: form.is_agile ? '#f0fdf4' : '#f9fafb', border: `1.5px solid ${form.is_agile ? '#86efac' : '#e5e7eb'}`, borderRadius: '8px', transition: 'all 0.15s' }}>
+            <input
+              type="checkbox"
+              checked={!!form.is_agile}
+              onChange={e => set('is_agile', e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: '#016D2D', cursor: 'pointer', flexShrink: 0 }}
+            />
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: form.is_agile ? '#014E20' : '#374151' }}>Agile Project</div>
+              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 1 }}>Enable Kanban board and agile workflows for this project</div>
+            </div>
+          </label>
 
           <div style={styles.actions}>
             <button type="button" onClick={onCancel} style={styles.cancelBtn} disabled={saving}>Cancel</button>

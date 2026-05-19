@@ -25,6 +25,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\AgilePhaseController;
+use App\Http\Controllers\SprintController;
 
 // ── Health check (public, no auth) ───────────────────────────────────────────
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'timestamp' => now()]));
@@ -189,6 +191,19 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('onboarding/sample-data',  [OnboardingController::class, 'loadSampleData']);
     Route::delete('onboarding/sample-data',[OnboardingController::class, 'deleteSampleData']);
     Route::post('onboarding/complete',   [OnboardingController::class, 'complete']);
+
+    // Agile Phases (admin)
+    Route::get('agile-phases',            [AgilePhaseController::class, 'index'])  ->middleware('authorize:admin.agile-phases,view');
+    Route::post('agile-phases',           [AgilePhaseController::class, 'store'])  ->middleware('authorize:admin.agile-phases,edit');
+    Route::put('agile-phases/reorder',    [AgilePhaseController::class, 'reorder'])->middleware('authorize:admin.agile-phases,edit');
+    Route::put('agile-phases/{id}',       [AgilePhaseController::class, 'update']) ->middleware('authorize:admin.agile-phases,edit');
+    Route::delete('agile-phases/{id}',    [AgilePhaseController::class, 'destroy'])->middleware('authorize:admin.agile-phases,edit');
+
+    // Sprints (admin)
+    Route::get('sprints',         [SprintController::class, 'index'])  ->middleware('authorize:admin.sprint-management,view');
+    Route::post('sprints',        [SprintController::class, 'store'])  ->middleware('authorize:admin.sprint-management,edit');
+    Route::put('sprints/{id}',    [SprintController::class, 'update']) ->middleware('authorize:admin.sprint-management,edit');
+    Route::delete('sprints/{id}', [SprintController::class, 'destroy'])->middleware('authorize:admin.sprint-management,edit');
 
     // AI Chat (OpenAI-powered)
     // Fix for audit finding H-5: chat executes write operations (update task status,

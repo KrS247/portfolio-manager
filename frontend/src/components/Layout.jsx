@@ -29,6 +29,9 @@ import GroupIcon              from '@mui/icons-material/Group';
 import BusinessIcon           from '@mui/icons-material/Business';
 import EditCalendarIcon       from '@mui/icons-material/EditCalendar';
 import ApartmentIcon          from '@mui/icons-material/Apartment';
+import ViewColumnIcon         from '@mui/icons-material/ViewColumn';
+import ViewKanbanIcon         from '@mui/icons-material/ViewKanban';
+import DirectionsRunIcon      from '@mui/icons-material/DirectionsRun';
 import LogoutIcon             from '@mui/icons-material/Logout';
 
 const COLLAPSED_W = 52;   // icon-only width in px
@@ -55,6 +58,12 @@ const ADMIN_ITEMS = [
   { slug: 'admin.company',     label: 'Company Setup',    path: '/admin/company-setup',    Icon: BusinessIcon },
   { slug: 'admin.company',     label: 'Working Calendar', path: '/admin/working-calendar', Icon: EditCalendarIcon },
   { slug: 'admin.companies',   label: 'Companies',        path: '/admin/companies',        Icon: ApartmentIcon },
+];
+
+// Sub-group: Agile Projects
+const AGILE_ITEMS = [
+  { slug: 'admin.agile-phases',      label: 'Agile Phases',      path: '/admin/agile-phases',      Icon: ViewColumnIcon },
+  { slug: 'admin.sprint-management', label: 'Sprint Management', path: '/admin/sprint-management', Icon: DirectionsRunIcon },
 ];
 
 export default function Layout({ children }) {
@@ -111,9 +120,12 @@ export default function Layout({ children }) {
 
   const visibleNav   = NAV_ITEMS.filter(item => canView(item.slug));
   const visibleAdmin = ADMIN_ITEMS.filter(item => canView(item.slug));
+  const visibleAgile = AGILE_ITEMS.filter(item => canView(item.slug));
 
   const isOnAdminRoute = location.pathname.startsWith('/admin');
+  const isOnAgileRoute = location.pathname.startsWith('/admin/agile');
   const [adminOpen, setAdminOpen] = useState(isOnAdminRoute);
+  const [agileOpen, setAgileOpen] = useState(isOnAgileRoute);
 
   // Label / text opacity — fades in slightly after the sidebar starts expanding
   const labelVisible = expanded;
@@ -201,24 +213,82 @@ export default function Layout({ children }) {
                 />
               </button>
 
-              {adminOpen && visibleAdmin.map(item => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  title={!expanded ? item.label : undefined}
-                  style={{
-                    ...styles.navItem,
-                    ...(isActive(item.path) ? styles.navActive : {}),
-                    justifyContent: expanded ? 'flex-start' : 'center',
-                    paddingLeft: expanded ? '1.6rem' : undefined,
-                  }}
-                >
-                  <item.Icon style={{ ...styles.navIcon, fontSize: 18 }} />
-                  <span style={{ ...styles.navLabel, opacity: labelVisible ? 1 : 0 }}>
-                    {item.label}
-                  </span>
-                </Link>
-              ))}
+              {adminOpen && (
+                <>
+                  {visibleAdmin.map(item => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      title={!expanded ? item.label : undefined}
+                      style={{
+                        ...styles.navItem,
+                        ...(isActive(item.path) ? styles.navActive : {}),
+                        justifyContent: expanded ? 'flex-start' : 'center',
+                        paddingLeft: expanded ? '1.6rem' : undefined,
+                      }}
+                    >
+                      <item.Icon style={{ ...styles.navIcon, fontSize: 18 }} />
+                      <span style={{ ...styles.navLabel, opacity: labelVisible ? 1 : 0 }}>
+                        {item.label}
+                      </span>
+                    </Link>
+                  ))}
+
+                  {/* Agile Projects sub-group */}
+                  {visibleAgile.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setAgileOpen(o => !o)}
+                        title={!expanded ? 'Agile Projects' : undefined}
+                        style={{
+                          ...styles.navItem,
+                          justifyContent: expanded ? 'flex-start' : 'center',
+                          paddingLeft: expanded ? '1.6rem' : undefined,
+                          background: isOnAgileRoute ? 'rgba(0,255,188,0.08)' : 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          width: '100%',
+                          color: '#D3DFD4',
+                        }}
+                      >
+                        <ViewKanbanIcon style={{ ...styles.navIcon, fontSize: 18, flexShrink: 0 }} />
+                        <span style={{ ...styles.navLabel, opacity: labelVisible ? 1 : 0, flex: 1 }}>
+                          Agile Projects
+                        </span>
+                        <ExpandMoreIcon
+                          style={{
+                            fontSize: 15,
+                            color: 'rgba(255,255,255,0.4)',
+                            flexShrink: 0,
+                            opacity: labelVisible ? 1 : 0,
+                            transition: 'transform 0.2s ease, opacity 0.15s ease',
+                            transform: agileOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          }}
+                        />
+                      </button>
+
+                      {agileOpen && visibleAgile.map(item => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          title={!expanded ? item.label : undefined}
+                          style={{
+                            ...styles.navItem,
+                            ...(isActive(item.path) ? styles.navActive : {}),
+                            justifyContent: expanded ? 'flex-start' : 'center',
+                            paddingLeft: expanded ? '2.6rem' : undefined,
+                          }}
+                        >
+                          <item.Icon style={{ ...styles.navIcon, fontSize: 16 }} />
+                          <span style={{ ...styles.navLabel, opacity: labelVisible ? 1 : 0, fontSize: '0.82rem' }}>
+                            {item.label}
+                          </span>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
             </>
           )}
         </nav>

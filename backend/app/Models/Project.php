@@ -7,7 +7,9 @@ class Project extends Model {
     use BelongsToTenant;
 
     protected $table = 'projects';
-    protected $fillable = ['company_id', 'program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id'];
+    protected $fillable = ['company_id', 'program_id', 'name', 'description', 'status', 'priority', 'start_date', 'end_date', 'owner_id', 'clickup_id', 'is_agile'];
+
+    protected $casts = ['is_agile' => 'boolean'];
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 

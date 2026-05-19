@@ -26,6 +26,8 @@ import TeamsAdmin from './pages/admin/TeamsAdmin';
 import CompanySetupAdmin from './pages/admin/CompanySetupAdmin';
 import WorkingCalendarAdmin from './pages/admin/WorkingCalendarAdmin';
 import CompaniesAdmin from './pages/admin/CompaniesAdmin';
+import AgilePhasesAdmin from './pages/admin/AgilePhasesAdmin';
+import SprintManagementAdmin from './pages/admin/SprintManagementAdmin';
 import Reports from './pages/Reports';
 import Capacity from './pages/Capacity';
 import RiskManagement from './pages/RiskManagement';
@@ -153,6 +155,16 @@ function AppRoutes() {
       <Route path="/admin/companies" element={
         <ProtectedRoute pageSlug="admin.companies">
           <Layout><CompaniesAdmin /></Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/agile-phases" element={
+        <ProtectedRoute pageSlug="admin.agile-phases">
+          <Layout><AgilePhasesAdmin /></Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/sprint-management" element={
+        <ProtectedRoute pageSlug="admin.sprint-management">
+          <Layout><SprintManagementAdmin /></Layout>
         </ProtectedRoute>
       } />
 
