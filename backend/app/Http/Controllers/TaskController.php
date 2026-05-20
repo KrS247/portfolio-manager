@@ -14,7 +14,7 @@ class TaskController extends Controller {
 
     // ── List ──────────────────────────────────────────────────────────────────
     public function index(Request $request) {
-        $query = Task::with(['risk', 'assignedUser']);
+        $query = Task::with(['risk', 'assignedUser', 'resources.user']);
 
         if ($request->parent_type) $query->where('parent_type', $request->parent_type);
         if ($request->parent_id)   $query->where('parent_id',   $request->parent_id);
@@ -125,6 +125,8 @@ class TaskController extends Controller {
             'sprint_id'       => 'nullable|integer|exists:sprints,id',
             'task_type'       => 'nullable|in:feature,bug_fix',
             'agile_phase_id'  => 'nullable|integer|exists:agile_phases,id',
+            'estimated_hours' => 'nullable|integer|min:1|max:80',
+            'actual_hours'    => 'nullable|integer|min:0',
         ]);
 
         $maxSeq = Task::where('parent_type', $data['parent_type'])
@@ -185,6 +187,8 @@ class TaskController extends Controller {
             'sprint_id'           => 'nullable|integer|exists:sprints,id',
             'task_type'           => 'nullable|in:feature,bug_fix',
             'agile_phase_id'      => 'nullable|integer|exists:agile_phases,id',
+            'estimated_hours'     => 'nullable|integer|min:1|max:80',
+            'actual_hours'        => 'nullable|integer|min:0',
         ]);
 
         $oldStart  = $task->start_date;
@@ -198,7 +202,7 @@ class TaskController extends Controller {
             'parent_type', 'parent_id', 'parent_task_id',
             'constraint_type', 'constraint_date', 'schedule_mode',
             'recurrence_type', 'recurrence_interval', 'recurrence_end_date',
-            'sprint_id', 'task_type', 'agile_phase_id',
+            'sprint_id', 'task_type', 'agile_phase_id', 'estimated_hours', 'actual_hours',
         ]));
 
         // Build a diff of human-visible changes for the activity log
@@ -405,8 +409,13 @@ class TaskController extends Controller {
         if ($projectId)       $portfolioId = $portfolioId ?? \App\Models\Project::find($projectId)?->program?->portfolio_id;
         elseif ($programId)   $portfolioId = $portfolioId ?? \App\Models\Program::find($programId)?->portfolio_id;
 
+        $resourceNames = $task->relationLoaded('resources')
+            ? $task->resources->map(fn($r) => $r->user?->username)->filter()->values()->all()
+            : [];
+
         return array_merge($task->toArray(), [
             'assigned_username' => $task->assignedUser?->username,
+            'resource_names'    => $resourceNames,
             'risk_rate'         => $task->risk?->risk_rate,
             'risk_status'       => $task->risk?->risk_status,
             'parent_task_id'    => $task->parent_task_id,

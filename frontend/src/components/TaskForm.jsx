@@ -90,6 +90,8 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
     assigned_to:      task?.assigned_to      || '',
     is_milestone:     task?.is_milestone     ? true : false,
     parent_task_id:   task?.parent_task_id   ?? parentTaskId ?? '',
+    estimated_hours:  task?.estimated_hours  ?? '',
+    actual_hours:     task?.actual_hours     ?? '',
   });
 
   // ── Schedule constraints state ───────────────────────────────────────────
@@ -248,37 +250,39 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
     setSaving(true);
     setError('');
 
-    // Start date is required for non-milestone tasks
-    if (!form.is_milestone && !form.start_date) {
-      setError('Start date is required');
-      setSaving(false);
-      return;
-    }
-
-    // Due date is always required
-    if (!form.due_date) {
-      setError('Due date is required');
-      setSaving(false);
-      return;
-    }
-
-    if (form.due_date && form.start_date && form.due_date < form.start_date) {
-      setError('Due date cannot be before start date');
-      setSaving(false);
-      return;
-    }
-
-    // Subtask date range must fit within the parent task's dates
-    if (currentParentTask) {
-      if (currentParentTask.start_date && form.start_date && form.start_date < currentParentTask.start_date) {
-        setError(`Start date must be on or after the parent task's start date (${currentParentTask.start_date})`);
+    if (!isAgile) {
+      // Start date is required for non-milestone tasks
+      if (!form.is_milestone && !form.start_date) {
+        setError('Start date is required');
         setSaving(false);
         return;
       }
-      if (currentParentTask.due_date && form.due_date && form.due_date > currentParentTask.due_date) {
-        setError(`Due date must be on or before the parent task's due date (${currentParentTask.due_date})`);
+
+      // Due date is always required
+      if (!form.due_date) {
+        setError('Due date is required');
         setSaving(false);
         return;
+      }
+
+      if (form.due_date && form.start_date && form.due_date < form.start_date) {
+        setError('Due date cannot be before start date');
+        setSaving(false);
+        return;
+      }
+
+      // Subtask date range must fit within the parent task's dates
+      if (currentParentTask) {
+        if (currentParentTask.start_date && form.start_date && form.start_date < currentParentTask.start_date) {
+          setError(`Start date must be on or after the parent task's start date (${currentParentTask.start_date})`);
+          setSaving(false);
+          return;
+        }
+        if (currentParentTask.due_date && form.due_date && form.due_date > currentParentTask.due_date) {
+          setError(`Due date must be on or before the parent task's due date (${currentParentTask.due_date})`);
+          setSaving(false);
+          return;
+        }
       }
     }
 
@@ -302,6 +306,10 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
         sprint_id:            agileForm.sprint_id      ? parseInt(agileForm.sprint_id)      : null,
         task_type:            agileForm.task_type      || null,
         agile_phase_id:       agileForm.agile_phase_id ? parseInt(agileForm.agile_phase_id) : null,
+        estimated_hours:      form.estimated_hours !== '' ? parseInt(form.estimated_hours) : null,
+        actual_hours:         form.actual_hours     !== '' ? parseInt(form.actual_hours)     : null,
+        // Agile tasks don't use dates — clear them so backend validation passes
+        ...(isAgile ? { start_date: null, due_date: null } : {}),
       };
       const { data: savedTask } = task
         ? await client.put(`/tasks/${task.id}`, payload)
@@ -415,13 +423,15 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               </span>
             )}
           </button>
-          <button
-            type="button"
-            style={{ ...styles.tab, ...(activeTab === 'schedule' ? styles.tabActive : {}) }}
-            onClick={() => setActiveTab('schedule')}
-          >
-            <CalendarTodayIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Schedule
-          </button>
+          {!isAgile && (
+            <button
+              type="button"
+              style={{ ...styles.tab, ...(activeTab === 'schedule' ? styles.tabActive : {}) }}
+              onClick={() => setActiveTab('schedule')}
+            >
+              <CalendarTodayIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Schedule
+            </button>
+          )}
           <button
             type="button"
             style={{ ...styles.tab, ...(activeTab === 'notes' ? styles.tabActive : {}) }}
@@ -434,7 +444,7 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
           </button>
           <button
             type="button"
-            style={{ ...styles.tab, ...(activeTab === 'comments' ? styles.tabActive : {}), ...(isAgile ? {} : { borderRight: 'none' }) }}
+            style={{ ...styles.tab, ...(activeTab === 'comments' ? styles.tabActive : {}), borderRight: 'none' }}
             onClick={() => setActiveTab('comments')}
           >
             <ForumIcon style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }} />Comments
@@ -442,20 +452,6 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               <span style={{ ...styles.tabBadge, background: activeTab === 'comments' ? 'rgba(255,255,255,0.25)' : '#ede9fe', color: activeTab === 'comments' ? '#fff' : '#7c3aed' }}>{comments.length}</span>
             )}
           </button>
-          {isAgile && (
-            <button
-              type="button"
-              style={{ ...styles.tab, ...(activeTab === 'agile' ? styles.tabActive : {}), borderRight: 'none', ...(activeTab !== 'agile' ? { color: '#7c3aed' } : {}) }}
-              onClick={() => setActiveTab('agile')}
-            >
-              🏃 Agile
-              {agileForm.task_type && (
-                <span style={{ ...styles.tabBadge, background: activeTab === 'agile' ? 'rgba(255,255,255,0.25)' : '#ede9fe', color: activeTab === 'agile' ? '#fff' : '#7c3aed' }}>
-                  {agileForm.task_type === 'feature' ? '★' : '🐛'}
-                </span>
-              )}
-            </button>
-          )}
         </div>
 
         {error && <div style={styles.error}>{error}</div>}
@@ -472,100 +468,220 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
               <textarea style={{ ...styles.input, height: '230px', minHeight: '168px', resize: 'vertical', flexShrink: 0 }}
                 value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optional description" />
 
-              <div style={styles.row}>
-                <div style={{ flex: 1 }}>
+              {isAgile ? (
+                /* ── Agile: Priority full-width, no Status ─────────── */
+                <div>
                   <label style={styles.label}>Priority — 1 (Lowest) to 10 (Highest)</label>
                   <PrioritySelect value={form.priority} onChange={v => set('priority', v)} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.label}>Status</label>
-                  <select style={styles.input} value={form.status} onChange={e => handleStatusChange(e.target.value)}>
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-
-              <label style={styles.label}>% Complete</label>
-              <div style={styles.sliderRow}>
-                <input
-                  type="range" min="0" max="100" step="5"
-                  value={form.percent_complete}
-                  onChange={e => handlePctChange(parseInt(e.target.value))}
-                  style={{ flex: 1, accentColor: pctColor, cursor: 'pointer' }}
-                />
-                <span style={{ minWidth: '3.2rem', textAlign: 'right', fontWeight: 800, fontSize: '1rem', color: pctColor }}>
-                  {form.percent_complete}%
-                </span>
-              </div>
-              <ProgressBar value={form.percent_complete} showLabel={false} />
-
-              {/* ── Milestone toggle ───────────────────────────────── */}
-              <label style={styles.milestoneRow}>
-                <input
-                  type="checkbox"
-                  checked={form.is_milestone}
-                  onChange={e => set('is_milestone', e.target.checked ? 1 : 0)}
-                  style={{ accentColor: '#d97706', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
-                />
-                <span style={{ fontWeight: 700, color: form.is_milestone ? '#d97706' : '#374151', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <StarBorderIcon style={{ fontSize: 16, color: '#d97706' }} />Milestone
-                </span>
-                {form.is_milestone && (
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
-                    Milestones have a due date only — start date is not applicable.
-                  </span>
-                )}
-              </label>
-
-              {/* Parent date range hint for subtasks */}
-              {currentParentTask && (currentParentTask.start_date || currentParentTask.due_date) && (
-                <div style={styles.parentDateHint}>
-                  <span><CalendarTodayIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />Parent task date range:</span>
-                  <strong>{currentParentTask.start_date || '–'}</strong>
-                  <span>→</span>
-                  <strong>{currentParentTask.due_date || '–'}</strong>
-                  <span style={{ color: '#9ca3af' }}>(subtask dates must fall within this range)</span>
+              ) : (
+                /* ── Classic: Priority + Status side-by-side ───────── */
+                <div style={styles.row}>
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>Priority — 1 (Lowest) to 10 (Highest)</label>
+                    <PrioritySelect value={form.priority} onChange={v => set('priority', v)} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>Status</label>
+                    <select style={styles.input} value={form.status} onChange={e => handleStatusChange(e.target.value)}>
+                      <option value="open">Open</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
-              <div style={styles.row}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ ...styles.label, color: form.is_milestone ? '#d1d5db' : '#374151' }}>
-                    Start Date{!form.is_milestone ? ' *' : ''}
-                  </label>
-                  <input
-                    style={{ ...styles.input, background: form.is_milestone ? '#f9fafb' : '#fff', color: form.is_milestone ? '#9ca3af' : 'inherit', cursor: form.is_milestone ? 'not-allowed' : 'pointer' }}
-                    type="date"
-                    value={form.is_milestone ? '' : form.start_date}
-                    disabled={!!form.is_milestone}
-                    required={!form.is_milestone}
-                    min={currentParentTask?.start_date || undefined}
-                    max={currentParentTask?.due_date || form.due_date || undefined}
-                    onChange={e => set('start_date', e.target.value)}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.label}>Due Date{form.is_milestone ? ' (Milestone Date)' : ' *'}</label>
-                  <input
-                    style={styles.input}
-                    type="date"
-                    value={form.due_date}
-                    required
-                    min={form.start_date || currentParentTask?.start_date || undefined}
-                    max={currentParentTask?.due_date || undefined}
-                    onChange={e => set('due_date', e.target.value)}
-                  />
-                </div>
-              </div>
+              {/* ── Agile fields inline (moved from Agile tab) ─────── */}
+              {isAgile && (
+                <>
+                  {/* Task Type */}
+                  <label style={styles.label}>Task Type</label>
+                  <select style={styles.input} value={agileForm.task_type} onChange={e => setAgile('task_type', e.target.value)}>
+                    <option value="">— None —</option>
+                    <option value="feature">Feature</option>
+                    <option value="bug_fix">Bug Fix</option>
+                  </select>
 
-              <label style={styles.label}>Responsible</label>
-              <select style={styles.input} value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}>
-                <option value="">Unassigned</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
-              </select>
+                  {/* Sprint */}
+                  <label style={styles.label}>Sprint</label>
+                  {sprints.length === 0 ? (
+                    <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                      No sprints available — create sprints in Admin → Agile Projects → Sprint Management.
+                    </div>
+                  ) : (
+                    <select style={styles.input} value={agileForm.sprint_id} onChange={e => setAgile('sprint_id', e.target.value)}>
+                      <option value="">— No Sprint —</option>
+                      {sprints.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.start_date})</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Phase */}
+                  <label style={styles.label}>Board Column (Phase)</label>
+                  {agilePhases.length === 0 ? (
+                    <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                      No phases configured — create phases in Admin → Agile Projects → Agile Phases.
+                    </div>
+                  ) : (
+                    <select style={styles.input} value={agileForm.agile_phase_id} onChange={e => setAgile('agile_phase_id', e.target.value)}>
+                      <option value="">— Unassigned —</option>
+                      {agilePhases.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              )}
+
+              {/* ── % Complete ─────────────────────────────────────── */}
+              {isAgile ? null : <label style={styles.label}>% Complete</label>}
+              {isAgile ? null : (
+                <>
+                  <div style={styles.sliderRow}>
+                    <input
+                      type="range" min="0" max="100" step="5"
+                      value={form.percent_complete}
+                      onChange={e => handlePctChange(parseInt(e.target.value))}
+                      style={{ flex: 1, accentColor: pctColor, cursor: 'pointer' }}
+                    />
+                    <span style={{ minWidth: '3.2rem', textAlign: 'right', fontWeight: 800, fontSize: '1rem', color: pctColor }}>
+                      {form.percent_complete}%
+                    </span>
+                  </div>
+                  <ProgressBar value={form.percent_complete} showLabel={false} />
+                </>
+              )}
+
+              {/* ── Milestone toggle (classic projects only) ───────── */}
+              {!isAgile && (
+                <label style={styles.milestoneRow}>
+                  <input
+                    type="checkbox"
+                    checked={form.is_milestone}
+                    onChange={e => set('is_milestone', e.target.checked ? 1 : 0)}
+                    style={{ accentColor: '#d97706', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 700, color: form.is_milestone ? '#d97706' : '#374151', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <StarBorderIcon style={{ fontSize: 16, color: '#d97706' }} />Milestone
+                  </span>
+                  {form.is_milestone && (
+                    <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>
+                      Milestones have a due date only — start date is not applicable.
+                    </span>
+                  )}
+                </label>
+              )}
+
+              {/* ── Date fields + Responsible (classic projects only) ── */}
+              {!isAgile && (
+                <>
+                  {currentParentTask && (currentParentTask.start_date || currentParentTask.due_date) && (
+                    <div style={styles.parentDateHint}>
+                      <span><CalendarTodayIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />Parent task date range:</span>
+                      <strong>{currentParentTask.start_date || '–'}</strong>
+                      <span>→</span>
+                      <strong>{currentParentTask.due_date || '–'}</strong>
+                      <span style={{ color: '#9ca3af' }}>(subtask dates must fall within this range)</span>
+                    </div>
+                  )}
+
+                  <div style={styles.row}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...styles.label, color: form.is_milestone ? '#d1d5db' : '#374151' }}>
+                        Start Date{!form.is_milestone ? ' *' : ''}
+                      </label>
+                      <input
+                        style={{ ...styles.input, background: form.is_milestone ? '#f9fafb' : '#fff', color: form.is_milestone ? '#9ca3af' : 'inherit', cursor: form.is_milestone ? 'not-allowed' : 'pointer' }}
+                        type="date"
+                        value={form.is_milestone ? '' : form.start_date}
+                        disabled={!!form.is_milestone}
+                        required={!form.is_milestone}
+                        min={currentParentTask?.start_date || undefined}
+                        max={currentParentTask?.due_date || form.due_date || undefined}
+                        onChange={e => set('start_date', e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={styles.label}>Due Date{form.is_milestone ? ' (Milestone Date)' : ' *'}</label>
+                      <input
+                        style={styles.input}
+                        type="date"
+                        value={form.due_date}
+                        required
+                        min={form.start_date || currentParentTask?.start_date || undefined}
+                        max={currentParentTask?.due_date || undefined}
+                        onChange={e => set('due_date', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <label style={styles.label}>Responsible</label>
+                  <select style={styles.input} value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}>
+                    <option value="">Unassigned</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                  </select>
+                </>
+              )}
+
+              {/* ── % Complete + Estimated Duration row (agile only) ── */}
+              {isAgile && (
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>% Complete</label>
+                    <input
+                      type="number"
+                      min={0} max={100} step={1}
+                      value={form.percent_complete}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '') { handlePctChange(0); return; }
+                        const n = parseInt(v);
+                        if (!isNaN(n)) handlePctChange(Math.min(100, Math.max(0, n)));
+                      }}
+                      style={styles.input}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>Estimated Duration (hours)</label>
+                    <input
+                      style={styles.input}
+                      type="number"
+                      min={1}
+                      max={80}
+                      step={1}
+                      value={form.estimated_hours}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '') { set('estimated_hours', ''); return; }
+                        const n = parseInt(v);
+                        if (!isNaN(n)) set('estimated_hours', Math.min(80, Math.max(1, n)));
+                      }}
+                      placeholder="e.g. 8"
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={styles.label}>Actual Hours</label>
+                    <input
+                      style={styles.input}
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.actual_hours}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '') { set('actual_hours', ''); return; }
+                        const n = parseInt(v);
+                        if (!isNaN(n)) set('actual_hours', Math.max(0, n));
+                      }}
+                      placeholder="e.g. 6"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* ── Parent Task ────────────────────────────────────── */}
               {parentableTaskList.length > 0 && (
@@ -748,8 +864,21 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
           {activeTab === 'resourcing' && (
             <>
               <p style={styles.riskHint}>
-                Assign one or more team members to this task and set their <strong>% time allocation</strong>.
+                Assign one or more team members to this task and set their <strong>time allocation</strong>.
               </p>
+
+              {/* Available Hours summary */}
+              {isAgile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.85rem', background: '#f0fdf4', borderRadius: 8, border: '1.5px solid #bbf7d0', marginBottom: '0.25rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 600 }}>Available Hours:</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: (() => { const avail = (parseFloat(form.estimated_hours) || 0) - resources.reduce((sum, r) => sum + (parseFloat(r.estimated_hours) || 0), 0); return avail < 0 ? '#dc2626' : avail === 0 ? '#d97706' : '#016D2D'; })() }}>
+                    {((parseFloat(form.estimated_hours) || 0) - resources.reduce((sum, r) => sum + (parseFloat(r.estimated_hours) || 0), 0)).toFixed(1)} hrs
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                    {form.estimated_hours || 0} estimated – {resources.reduce((sum, r) => sum + (parseFloat(r.estimated_hours) || 0), 0).toFixed(1)} assigned
+                  </span>
+                </div>
+              )}
 
               {/* Add user row */}
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -783,12 +912,22 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                   {resources.map(r => (
                     <div key={r.user_id} style={styles.resourceRow}>
                       {/* Header: name + rate badge + remove */}
-                      <div style={styles.resourceHeader}>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <span style={styles.resourceName}>{r.username}</span>
                           {r.hourly_rate != null && (
                             <span style={styles.resourceRate}>${parseFloat(r.hourly_rate).toFixed(0)}/hr</span>
                           )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                          <label style={{ ...styles.resourceFieldLabel, marginBottom: 0, whiteSpace: 'nowrap' }}>Est. hrs</label>
+                          <input
+                            style={{ ...styles.input, width: 72, marginBottom: 0 }}
+                            type="number" min="0" step="0.5"
+                            value={r.estimated_hours ?? ''}
+                            onChange={e => handleHoursChange(r.user_id, 'estimated_hours', e.target.value)}
+                            placeholder="0"
+                          />
                         </div>
                         <button
                           type="button"
@@ -798,29 +937,6 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
                         >
                           <CloseIcon style={{ fontSize: 14 }} />
                         </button>
-                      </div>
-                      {/* Hours inputs */}
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={styles.resourceFieldLabel}>Estimated Hours</label>
-                          <input
-                            style={{ ...styles.input, marginTop: '3px' }}
-                            type="number" min="0" step="0.5"
-                            value={r.estimated_hours ?? ''}
-                            onChange={e => handleHoursChange(r.user_id, 'estimated_hours', e.target.value)}
-                            placeholder="e.g. 8"
-                          />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label style={styles.resourceFieldLabel}>Actual Hours</label>
-                          <input
-                            style={{ ...styles.input, marginTop: '3px' }}
-                            type="number" min="0" step="0.5"
-                            value={r.actual_hours ?? ''}
-                            onChange={e => handleHoursChange(r.user_id, 'actual_hours', e.target.value)}
-                            placeholder="e.g. 10"
-                          />
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -1044,55 +1160,6 @@ export default function TaskForm({ parentType, parentId, task, parentTaskId = nu
             </>
           )}
 
-          {/* ════════════════════════════════ AGILE TAB ══════════ */}
-          {activeTab === 'agile' && (
-            <>
-              <p style={styles.riskHint}>
-                Configure agile-specific settings for this task. Assign it to a sprint, select the type, and place it in the correct workflow column.
-              </p>
-
-              {/* Task Type */}
-              <label style={styles.label}>Task Type</label>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                {[['', 'None'], ['feature', '★ Feature'], ['bug_fix', '🐛 Bug Fix']].map(([val, label]) => (
-                  <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.5rem 0.9rem', borderRadius: 8, border: `1.5px solid ${agileForm.task_type === val ? '#6d28d9' : '#e5e7eb'}`, background: agileForm.task_type === val ? '#f5f3ff' : '#f9fafb', fontWeight: agileForm.task_type === val ? 700 : 500, color: agileForm.task_type === val ? '#6d28d9' : '#374151', fontSize: '0.88rem', transition: 'all 0.15s', flex: 1, justifyContent: 'center' }}>
-                    <input type="radio" name="task_type" value={val} checked={agileForm.task_type === val} onChange={() => setAgile('task_type', val)} style={{ display: 'none' }} />
-                    {label}
-                  </label>
-                ))}
-              </div>
-
-              {/* Sprint */}
-              <label style={styles.label}>Sprint</label>
-              {sprints.length === 0 ? (
-                <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
-                  No sprints available — create sprints in Admin → Agile Projects → Sprint Management.
-                </div>
-              ) : (
-                <select style={styles.input} value={agileForm.sprint_id} onChange={e => setAgile('sprint_id', e.target.value)}>
-                  <option value="">— No Sprint —</option>
-                  {sprints.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.start_date})</option>
-                  ))}
-                </select>
-              )}
-
-              {/* Phase / Column */}
-              <label style={styles.label}>Board Column (Phase)</label>
-              {agilePhases.length === 0 ? (
-                <div style={{ fontSize: '0.83rem', color: '#9ca3af', padding: '0.5rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
-                  No phases configured — create phases in Admin → Agile Projects → Agile Phases.
-                </div>
-              ) : (
-                <select style={styles.input} value={agileForm.agile_phase_id} onChange={e => setAgile('agile_phase_id', e.target.value)}>
-                  <option value="">— Unassigned —</option>
-                  {agilePhases.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
 
           </div>{/* end tabContent */}
 

@@ -4,6 +4,7 @@ import { useApi } from '../hooks/useApi';
 import { usePermissions } from '../hooks/usePermissions';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
+import PriorityBadge from '../components/PriorityBadge';
 import PrioritySelect from '../components/PrioritySelect';
 import InfoTooltip from '../components/InfoTooltip';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -157,15 +158,48 @@ function ProjectForm({ project, onSave, onCancel }) {
   );
 }
 
+// Column key → sort accessor
+const COL_SORT_KEY = {
+  'Name':        p => (p.name        || '').toLowerCase(),
+  'Priority':    p => p.priority     ?? 0,
+  'Status':      p => (p.status      || '').toLowerCase(),
+  'Program':     p => (p.program_name     || '').toLowerCase(),
+  'Portfolio':   p => (p.portfolio_name   || '').toLowerCase(),
+  'Tasks':       p => p.task_count   ?? 0,
+  'Start Date':  p => p.start_date   || '',
+  'End Date':    p => p.end_date     || '',
+  'Avg Risk':    p => p.avg_risk_rate ?? -1,
+  'Est. Cost':   p => p.estimated_cost ?? 0,
+  'Actual Cost': p => p.actual_cost   ?? 0,
+};
+
 export default function Projects() {
   const { data: projects, loading, error, refetch } = useApi('/projects');
   const { canEdit } = usePermissions();
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('pm_view_projects') || 'card');
   const setView = (v) => { setViewMode(v); localStorage.setItem('pm_view_projects', v); };
   const [editProj, setEditProj] = useState(null);
+  const [sortCol, setSortCol]   = useState(null);
+  const [sortDir, setSortDir]   = useState('asc');
+
+  const handleSort = (col) => {
+    if (!COL_SORT_KEY[col]) return;
+    setSortCol(col);
+    setSortDir(d => (sortCol === col && d === 'asc') ? 'desc' : 'asc');
+  };
 
   if (loading) return <div style={{ padding: '2rem', color: '#6b7280' }}>Loading...</div>;
   if (error)   return <div style={{ padding: '1rem', color: '#991b1b', background: '#fee2e2', borderRadius: '8px' }}>{error}</div>;
+
+  const sortedProjects = sortCol && COL_SORT_KEY[sortCol]
+    ? [...(projects || [])].sort((a, b) => {
+        const av = COL_SORT_KEY[sortCol](a);
+        const bv = COL_SORT_KEY[sortCol](b);
+        if (av < bv) return sortDir === 'asc' ? -1 :  1;
+        if (av > bv) return sortDir === 'asc' ?  1 : -1;
+        return 0;
+      })
+    : (projects || []);
 
   return (
     <div>
@@ -179,7 +213,7 @@ export default function Projects() {
         <ViewToggle view={viewMode} onChange={setView} />
       </div>
 
-      {projects?.length === 0 && <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No projects yet. Add projects through a program detail page.</p>}
+      {sortedProjects.length === 0 && !loading && <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No projects yet. Add projects through a program detail page.</p>}
 
       {viewMode === 'card' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -208,18 +242,39 @@ export default function Projects() {
           <table style={styles.table}>
             <thead>
               <tr>
-                {['Name', 'Status', 'Program', 'Portfolio', 'Tasks', 'Start Date', 'End Date', 'Avg Risk', 'Est. Cost', 'Actual Cost', 'Actions'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
-                ))}
+                {['Name', 'Priority', 'Status', 'Program', 'Portfolio', 'Tasks', 'Start Date', 'End Date', 'Avg Risk', 'Est. Cost', 'Actual Cost', 'Actions'].map(h => {
+                  const sortable = !!COL_SORT_KEY[h];
+                  const isActive = sortCol === h;
+                  return (
+                    <th
+                      key={h}
+                      onClick={() => handleSort(h)}
+                      style={{
+                        ...styles.th,
+                        cursor: sortable ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {h}
+                      {sortable && (
+                        <span style={{ marginLeft: 5, fontSize: '0.7rem', opacity: isActive ? 1 : 0.35 }}>
+                          {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                        </span>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {projects?.map((p, i) => (
+              {sortedProjects.map((p, i) => (
                 <tr key={p.id} className="pm-row" style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
                   <td style={styles.td}>
                     <Link to={`/projects/${p.id}`} style={styles.tableLink}>{p.name}</Link>
                     {p.description && <div style={styles.tableDesc}>{p.description}</div>}
                   </td>
+                  <td style={styles.td}><PriorityBadge priority={p.priority} /></td>
                   <td style={styles.td}><StatusBadge status={p.status} /></td>
                   <td style={styles.td}>
                     <Link to={`/programs/${p.program_id}`} style={{ color: '#016D2D', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>{p.program_name}</Link>

@@ -15,7 +15,7 @@ class Task extends Model {
         'early_start', 'early_finish', 'late_start', 'late_finish', 'float_days', 'duration_days',
         'created_by',
         'recurrence_type', 'recurrence_interval', 'recurrence_end_date', 'recurrence_parent_id',
-        'sprint_id', 'task_type', 'agile_phase_id',
+        'sprint_id', 'task_type', 'agile_phase_id', 'estimated_hours', 'actual_hours',
     ];
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';

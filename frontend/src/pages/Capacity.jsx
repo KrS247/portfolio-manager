@@ -39,13 +39,20 @@ const cellColor = (util) => {
   return                        { bg: '#fca5a5', text: '#991b1b' };
 };
 
+// ── Sprint helpers ────────────────────────────────────────────────────────────
+const sprintEndDate = (sprint) => {
+  const d = new Date(sprint.start_date + 'T00:00:00');
+  d.setDate(d.getDate() + sprint.duration_weeks * 7 - 3);
+  return d.toISOString().slice(0, 10);
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function Capacity() {
   const [from, setFrom]           = useState(getMondayOfWeek);
   const [to, setTo]               = useState(() => addWeeks(getMondayOfWeek(), 11));
   const [scopeType, setScopeType] = useState('');
   const [scopeId, setScopeId]     = useState('');
-  const [viewMode, setViewMode]   = useState('weeks'); // 'weeks' | 'months'
+  const [viewMode, setViewMode]   = useState('weeks'); // 'weeks' | 'months' | 'sprints'
   const [data, setData]           = useState(null);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
@@ -54,6 +61,7 @@ export default function Capacity() {
   const { data: portfolios } = useApi('/portfolios');
   const { data: programs }   = useApi('/programs');
   const { data: projects }   = useApi('/projects');
+  const { data: sprints }    = useApi('/sprints');
 
   const load = () => {
     setLoading(true);
@@ -78,10 +86,18 @@ export default function Capacity() {
     scopeType === 'program'   ? (programs   || []) :
     scopeType === 'project'   ? (projects   || []) : [];
 
-  // ── Columns (weeks or months) ─────────────────────────────────────────────
+  // ── Columns (weeks, months, or sprints) ──────────────────────────────────
   const getColumns = () => {
     if (!data) return [];
     if (viewMode === 'weeks') return data.weeks;
+    if (viewMode === 'sprints') {
+      // Map each sprint to the set of data.weeks that fall within it
+      return (sprints || []).map(sprint => {
+        const end   = sprintEndDate(sprint);
+        const weeks = data.weeks.filter(w => w >= sprint.start_date && w <= end);
+        return { sprintId: sprint.id, name: sprint.name, startDate: sprint.start_date, endDate: end, weeks };
+      }).filter(col => col.weeks.length > 0); // only show sprints that overlap with loaded range
+    }
     // Group weeks into months
     const months = {};
     data.weeks.forEach(w => {
@@ -92,26 +108,28 @@ export default function Capacity() {
     return Object.entries(months).map(([month, weeks]) => ({ month, weeks }));
   };
 
-  const getColLabel = (col) =>
-    viewMode === 'weeks'
-      ? fmtWeek(col)
-      : fmtMonth(col.month);
+  const getColLabel = (col) => {
+    if (viewMode === 'weeks')   return fmtWeek(col);
+    if (viewMode === 'sprints') return col.name;
+    return fmtMonth(col.month);
+  };
 
-  const getColSub = (col) =>
-    viewMode === 'weeks'
-      ? col.slice(0, 4) // year
-      : `${col.weeks?.length}w`;
+  const getColSub = (col) => {
+    if (viewMode === 'weeks')   return col.slice(0, 4);
+    if (viewMode === 'sprints') return `${fmtWeek(col.startDate)} – ${fmtWeek(col.endDate)}`;
+    return `${col.weeks?.length}w`;
+  };
 
   // ── Cell aggregation ──────────────────────────────────────────────────────
   const getCellData = (resource, col) => {
     if (viewMode === 'weeks') {
       return resource.weeks[col] || { allocated: 0, capacity: 0, utilisation: 0, tasks: [] };
     }
+    // months and sprints both use a `weeks` array on the col object
     const weekData = col.weeks.map(w => resource.weeks[w]).filter(Boolean);
     const allocated = weekData.reduce((a, w) => a + w.allocated, 0);
     const capacity  = weekData.reduce((a, w) => a + w.capacity,  0);
     const utilisation = capacity > 0 ? (allocated / capacity) * 100 : 0;
-    // Merge task hours within the month
     const taskMap = {};
     weekData.flatMap(w => w.tasks).forEach(t => {
       if (!taskMap[t.task_id]) taskMap[t.task_id] = { ...t, hours: 0 };
@@ -169,8 +187,20 @@ export default function Capacity() {
         <div style={s.headerRow}>
           <h1 style={s.title}><GroupIcon style={{ fontSize: 22, verticalAlign: 'middle', marginRight: 6 }} />Resource Capacity Planning</h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => setViewMode('weeks')}  style={{ ...s.viewBtn, ...(viewMode === 'weeks'  ? s.viewActive : {}) }}>Weeks</button>
-            <button onClick={() => setViewMode('months')} style={{ ...s.viewBtn, ...(viewMode === 'months' ? s.viewActive : {}) }}>Months</button>
+            <button onClick={() => setViewMode('weeks')}   style={{ ...s.viewBtn, ...(viewMode === 'weeks'   ? s.viewActive : {}) }}>Weeks</button>
+            <button
+              onClick={() => {
+                setViewMode('sprints');
+                // Auto-expand date range to cover all sprints
+                if (sprints && sprints.length > 0) {
+                  const sorted = [...sprints].sort((a, b) => a.start_date.localeCompare(b.start_date));
+                  setFrom(sorted[0].start_date);
+                  setTo(sprintEndDate(sorted[sorted.length - 1]));
+                }
+              }}
+              style={{ ...s.viewBtn, ...(viewMode === 'sprints' ? s.viewActive : {}) }}
+            >Sprints</button>
+            <button onClick={() => setViewMode('months')}  style={{ ...s.viewBtn, ...(viewMode === 'months'  ? s.viewActive : {}) }}>Months</button>
           </div>
         </div>
 

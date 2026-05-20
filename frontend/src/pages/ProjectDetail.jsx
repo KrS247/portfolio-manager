@@ -21,8 +21,6 @@ import CommentIcon from '@mui/icons-material/Comment';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 
 // ─── Risk helpers ────────────────────────────────────────────────────────────
 function getRiskMeta(rate) {
@@ -445,7 +443,6 @@ export default function ProjectDetail() {
   const { data: sprints }      = useApi(data?.is_agile ? '/sprints'      : null);
   const { data: agilePhases }  = useApi(data?.is_agile ? '/agile-phases' : null);
   const [showInsights, setShowInsights] = useState(false);
-  const [projectView,  setProjectView]  = useState('tasks'); // 'tasks' | 'board'
 
   if (loading) return <div style={{ padding: '2rem', color: '#6b7280' }}>Loading...</div>;
   if (error)   return <div style={{ padding: '1rem', color: '#991b1b', background: '#fee2e2', borderRadius: '8px' }}>{error}</div>;
@@ -513,36 +510,16 @@ export default function ProjectDetail() {
       </div>
 
       <div style={styles.card}>
-        {/* ── Agile / Classic tab toggle (agile projects only) ──── */}
-        {!!data.is_agile && (
-          <div style={{ display: 'flex', gap: 0, border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', marginBottom: '1rem', width: 'fit-content' }}>
-            <button
-              style={{ padding: '0.4rem 1rem', background: projectView === 'tasks' ? '#016D2D' : '#f9fafb', color: projectView === 'tasks' ? '#fff' : '#6b7280', border: 'none', borderRight: '1.5px solid #e5e7eb', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 5 }}
-              onClick={() => setProjectView('tasks')}
-            >
-              <FormatListBulletedIcon style={{ fontSize: 15 }} />Task List
-            </button>
-            <button
-              style={{ padding: '0.4rem 1rem', background: projectView === 'board' ? '#016D2D' : '#f9fafb', color: projectView === 'board' ? '#fff' : '#6b7280', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 5 }}
-              onClick={() => setProjectView('board')}
-            >
-              <ViewKanbanIcon style={{ fontSize: 15 }} />Board
-            </button>
-          </div>
-        )}
-
-        {/* ── Board view (agile projects only) ────────────────────── */}
-        {!!data.is_agile && projectView === 'board' && (
+        {/* ── Agile projects: Sprint Board only (no list/gantt) ───── */}
+        {!!data.is_agile ? (
           <SprintBoard
             projectId={parseInt(id)}
             parentType="project"
             canEdit={canEdit('tasks')}
             users={users || []}
           />
-        )}
-
-        {/* ── Task list view ───────────────────────────────────────── */}
-        {(!data.is_agile || projectView === 'tasks') && (
+        ) : (
+          /* ── Classic projects: Task List + Gantt ─────────────────── */
           <TaskList
             tasks={data.tasks || []}
             parentType="project"
@@ -551,17 +528,16 @@ export default function ProjectDetail() {
             canAdd={canEdit('tasks')}
             onRefresh={refetch}
             users={users || []}
-            isAgile={!!data.is_agile}
-            sprints={sprints || []}
-            agilePhases={agilePhases || []}
           />
         )}
       </div>
 
-      {/* ── Earned Value Management ────────────────────────────────── */}
-      <div style={styles.card}>
-        <EVMPanel parentType="project" parentId={parseInt(id)} />
-      </div>
+      {/* ── Earned Value Management (non-agile projects only) ───────── */}
+      {!data.is_agile && (
+        <div style={styles.card}>
+          <EVMPanel parentType="project" parentId={parseInt(id)} />
+        </div>
+      )}
 
       {/* Insights Modal */}
       {showInsights && (

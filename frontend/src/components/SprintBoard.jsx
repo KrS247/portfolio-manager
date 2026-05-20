@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import client from '../api/client';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
+import ProgressBar from './ProgressBar';
 import TaskForm from './TaskForm';
 import ConfirmDialog from './ConfirmDialog';
-import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import StarIcon from '@mui/icons-material/Star';
@@ -29,115 +29,186 @@ function sprintEndDate(sprint) {
 
 function findCurrentSprint(sprints) {
   const today = toLocalDateStr(new Date());
-  // First preference: a sprint whose range contains today
   const active = sprints.find(s => s.start_date <= today && sprintEndDate(s) >= today);
   if (active) return active;
-  // Next: the most recently started past sprint
   const past = sprints.filter(s => s.start_date <= today).sort((a, b) => b.start_date.localeCompare(a.start_date));
   if (past.length) return past[0];
-  // Fallback: the soonest future sprint
   const future = sprints.filter(s => s.start_date > today).sort((a, b) => a.start_date.localeCompare(b.start_date));
   return future[0] || null;
 }
+
+const SPRINT_STATUS_META = {
+  planned:   { label: 'Planned',   bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  active:    { label: 'Active',    bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
+  completed: { label: 'Completed', bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' },
+};
 
 const TASK_TYPE_META = {
   feature: { label: 'Feature', color: '#2563eb', bg: '#dbeafe', icon: <StarIcon style={{ fontSize: 11 }} /> },
   bug_fix: { label: 'Bug Fix', color: '#dc2626', bg: '#fee2e2', icon: <BugReportIcon style={{ fontSize: 11 }} /> },
 };
 
-// ── Card ──────────────────────────────────────────────────────────────────────
-function TaskCard({ task, canEdit, onEdit, onDelete }) {
+// ── Task table ────────────────────────────────────────────────────────────────
+function TaskRow({ task, canEdit, onEdit, onDelete, zebra }) {
+  const [hovered, setHovered] = useState(false);
   const typeMeta = task.task_type ? TASK_TYPE_META[task.task_type] : null;
   const pct      = task.percent_complete ?? 0;
-  const pctColor = pct >= 75 ? '#16a34a' : pct >= 40 ? '#d97706' : '#6b7280';
+  const today    = toLocalDateStr(new Date());
+  const overdue  = task.due_date && task.due_date < today && task.status !== 'completed';
+  const rowBg    = hovered ? '#f0fdf4' : zebra ? '#fafafa' : '#fff';
 
   return (
-    <div style={cardSt.card}>
-      {typeMeta && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.68rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: typeMeta.bg, color: typeMeta.color, marginBottom: 5 }}>
-          {typeMeta.icon}{typeMeta.label}
+    <tr
+      style={{ background: rowBg, transition: 'background 0.1s', cursor: 'pointer' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Title — clicking opens edit form */}
+      <td style={tbl.td} onClick={() => onEdit(task)}>
+        <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#016D2D', textDecoration: hovered ? 'underline' : 'none' }}>
+          {task.title}
         </span>
-      )}
-      <div style={cardSt.title}>{task.title}</div>
-      {task.description && <div style={cardSt.desc}>{task.description}</div>}
-      <div style={cardSt.meta}>
-        <PriorityBadge priority={task.priority} />
-        <StatusBadge status={task.status} />
-      </div>
-      <div style={cardSt.footer}>
-        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: pctColor }}>{pct}%</span>
-        {(task.assigned_username || task.assigned_to_name) && (
-          <span style={{ fontSize: '0.72rem', color: '#9ca3af', background: '#f3f4f6', borderRadius: 20, padding: '1px 7px' }}>{task.assigned_username || task.assigned_to_name}</span>
+        {task.description && (
+          <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 2, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {task.description}
+          </div>
         )}
-        {canEdit && (
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 3 }}>
-            <button style={cardSt.iconBtn} onClick={() => onEdit(task)} title="Edit"><EditIcon style={{ fontSize: 14 }} /></button>
-            <button style={{ ...cardSt.iconBtn, color: '#dc2626' }} onClick={() => onDelete(task)} title="Delete"><DeleteIcon style={{ fontSize: 14 }} /></button>
+      </td>
+      {/* Estimated Duration */}
+      <td style={{ ...tbl.td, whiteSpace: 'nowrap' }}>
+        {task.estimated_hours
+          ? <span style={{ fontSize: '0.82rem', color: '#374151' }}>{task.estimated_hours}h</span>
+          : <span style={{ color: '#d1d5db', fontSize: '0.8rem' }}>—</span>}
+      </td>
+      {/* Type */}
+      <td style={tbl.td}>
+        {typeMeta ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: typeMeta.bg, color: typeMeta.color }}>
+            {typeMeta.icon}{typeMeta.label}
           </span>
+        ) : (
+          <span style={{ color: '#d1d5db', fontSize: '0.8rem' }}>—</span>
         )}
-      </div>
-    </div>
-  );
-}
-
-const cardSt = {
-  card:    { background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '0.75rem', marginBottom: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', cursor: 'default' },
-  title:   { fontWeight: 700, fontSize: '0.9rem', color: '#1d1d1d', marginBottom: 4, lineHeight: 1.3 },
-  desc:    { fontSize: '0.78rem', color: '#6b7280', marginBottom: 6, lineHeight: 1.4 },
-  meta:    { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 },
-  footer:  { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  iconBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px 4px', borderRadius: 4, display: 'inline-flex', alignItems: 'center' },
-};
-
-// ── Column ────────────────────────────────────────────────────────────────────
-function PhaseColumn({ phase, tasks, canEdit, onAddTask, onEdit, onDelete, totalCols }) {
-  const minColWidth = Math.max(240, Math.floor((window.innerWidth - 320) / Math.max(totalCols, 1)));
-  return (
-    <div style={{ minWidth: Math.min(minColWidth, 300), flex: '1 1 260px', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '0.75rem 0.75rem 1rem' }}>
-      {/* Column header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+      </td>
+      {/* Priority */}
+      <td style={tbl.td}><PriorityBadge priority={task.priority} /></td>
+      {/* Status */}
+      <td style={tbl.td}><StatusBadge status={task.status} /></td>
+      {/* Progress */}
+      <td style={tbl.td}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {phase.color && (
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: phase.color, flexShrink: 0 }} />
-          )}
-          <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{phase.name}</span>
-          <span style={{ background: '#e5e7eb', color: '#6b7280', borderRadius: 20, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>{tasks.length}</span>
+          <div style={{ flex: 1 }}>
+            <ProgressBar value={pct} size="sm" showLabel={false} />
+          </div>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: pct >= 75 ? '#16a34a' : pct >= 40 ? '#d97706' : '#6b7280', minWidth: 30, textAlign: 'right' }}>
+            {pct}%
+          </span>
         </div>
-        {canEdit && (
-          <button
-            style={{ background: '#016D2D', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}
-            onClick={() => onAddTask(phase)}
-            title={`Add task to ${phase.name}`}
-          >
-            <AddIcon style={{ fontSize: 14 }} />
-          </button>
+      </td>
+      {/* Resources */}
+      <td style={tbl.td}>
+        {task.resource_names && task.resource_names.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {task.resource_names.map((name, i) => (
+              <span key={i} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#f0fdf4', color: '#016D2D', border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>
+                {name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span style={{ color: '#d1d5db', fontSize: '0.8rem' }}>—</span>
         )}
-      </div>
-
-      {/* Cards */}
-      {tasks.length === 0 && (
-        <div style={{ color: '#d1d5db', fontSize: '0.8rem', textAlign: 'center', padding: '1.5rem 0', fontStyle: 'italic' }}>No tasks</div>
+      </td>
+      {/* Due date */}
+      <td style={tbl.td}>
+        {task.due_date ? (
+          <span style={{ fontSize: '0.82rem', fontWeight: overdue ? 700 : 400, color: overdue ? '#dc2626' : '#374151' }}>
+            {overdue && '⚠ '}{task.due_date}
+          </span>
+        ) : (
+          <span style={{ color: '#d1d5db', fontSize: '0.8rem' }}>—</span>
+        )}
+      </td>
+      {/* Actions */}
+      {canEdit && (
+        <td style={{ ...tbl.td, textAlign: 'center' }}>
+          <button style={tbl.editBtn} onClick={(e) => { e.stopPropagation(); onEdit(task); }} title="Edit">
+            <EditIcon style={{ fontSize: 15 }} />
+          </button>
+          <button style={tbl.deleteBtn} onClick={(e) => { e.stopPropagation(); onDelete(task); }} title="Delete">
+            <DeleteIcon style={{ fontSize: 15 }} />
+          </button>
+        </td>
       )}
-      {tasks.map(t => (
-        <TaskCard key={t.id} task={t} canEdit={canEdit} onEdit={onEdit} onDelete={onDelete} />
-      ))}
+    </tr>
+  );
+}
+
+function TaskTable({ tasks, canEdit, onEdit, onDelete }) {
+  if (tasks.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#c4c4c4', fontSize: '0.9rem', border: '2px dashed #f0f0f0', borderRadius: 12 }}>
+        No tasks in this phase for the selected sprint.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ overflowX: 'auto', borderRadius: 10, border: '1.5px solid #e5e7eb' }}>
+      <table style={tbl.table}>
+        <thead>
+          <tr>
+            <th style={tbl.th}>Task</th>
+            <th style={{ ...tbl.th, width: 90 }}>Est. Duration</th>
+            <th style={tbl.th}>Type</th>
+            <th style={tbl.th}>Priority</th>
+            <th style={tbl.th}>Status</th>
+            <th style={{ ...tbl.th, width: 130 }}>Progress</th>
+            <th style={tbl.th}>Resources</th>
+            <th style={tbl.th}>Due Date</th>
+            {canEdit && <th style={{ ...tbl.th, width: 80, textAlign: 'center' }}>Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task, i) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              canEdit={canEdit}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              zebra={i % 2 !== 0}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
+
+const tbl = {
+  table:     { width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' },
+  th:        { padding: '0.6rem 0.85rem', background: '#f9fafb', borderBottom: '2px solid #e5e7eb', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' },
+  td:        { padding: '0.65rem 0.85rem', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' },
+  editBtn:   { background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '3px 4px', borderRadius: 4, display: 'inline-flex', alignItems: 'center' },
+  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '3px 4px', borderRadius: 4, display: 'inline-flex', alignItems: 'center' },
+};
 
 // ── Main board ────────────────────────────────────────────────────────────────
 export default function SprintBoard({ projectId, parentType = 'project', canEdit, users = [] }) {
-  const [sprints,      setSprints]      = useState([]);
-  const [phases,       setPhases]       = useState([]);
-  const [tasks,        setTasks]        = useState([]);
-  const [selectedId,   setSelectedId]   = useState(null); // sprint id
-  const [loading,      setLoading]      = useState(true);
+  const [sprints,       setSprints]       = useState([]);
+  const [phases,        setPhases]        = useState([]);
+  const [tasks,         setTasks]         = useState([]);
+  const [selectedId,    setSelectedId]    = useState(null); // sprint id
+  const [activePhaseId, setActivePhaseId] = useState(null); // phase tab id
+  const [loading,       setLoading]       = useState(true);
 
   // Task form state
-  const [showForm,     setShowForm]     = useState(false);
-  const [editTask,     setEditTask]     = useState(null);
-  const [deleteTask,   setDeleteTask]   = useState(null);
-  const [defaultPhase, setDefaultPhase] = useState(null); // pre-fill phase when adding from column
+  const [showForm,          setShowForm]          = useState(false);
+  const [editTask,          setEditTask]          = useState(null);
+  const [deleteTask,        setDeleteTask]        = useState(null);
+  const [showFinaliseConfirm, setShowFinaliseConfirm] = useState(false);
+  const [showComingSoon,    setShowComingSoon]    = useState(false);
 
   // ── Load data ──────────────────────────────────────────────────────────────
   const loadAll = async () => {
@@ -149,16 +220,17 @@ export default function SprintBoard({ projectId, parentType = 'project', canEdit
         client.get(`/tasks?parent_type=${parentType}&parent_id=${projectId}`),
       ]);
       const sprintList = sRes.data || [];
+      const phaseList  = pRes.data || [];
       setSprints(sprintList);
-      setPhases(pRes.data || []);
+      setPhases(phaseList);
       setTasks(tRes.data || []);
 
-      // Only set default sprint on first load
       setSelectedId(prev => {
         if (prev !== null) return prev;
         const cur = findCurrentSprint(sprintList);
         return cur ? cur.id : (sprintList[0]?.id ?? null);
       });
+      setActivePhaseId(prev => prev ?? (phaseList[0]?.id ?? null));
     } catch (e) {
       console.error('SprintBoard load error', e);
     } finally {
@@ -168,140 +240,219 @@ export default function SprintBoard({ projectId, parentType = 'project', canEdit
 
   useEffect(() => { loadAll(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
   const selectedSprint = sprints.find(s => s.id === selectedId) || null;
-  const boardTasks     = tasks.filter(t => t.sprint_id === selectedId);
+  const sprintTasks    = tasks.filter(t => t.sprint_id === selectedId);
 
-  // Group tasks by agile_phase_id; one bucket per phase + unassigned
-  const tasksByPhase = {};
-  phases.forEach(p => { tasksByPhase[p.id] = []; });
-  tasksByPhase['unassigned'] = [];
-  boardTasks.forEach(t => {
-    if (t.agile_phase_id && tasksByPhase[t.agile_phase_id]) {
-      tasksByPhase[t.agile_phase_id].push(t);
+  const countByPhase = {};
+  phases.forEach(p => { countByPhase[p.id] = 0; });
+  countByPhase['unassigned'] = 0;
+  sprintTasks.forEach(t => {
+    if (t.agile_phase_id && countByPhase[t.agile_phase_id] !== undefined) {
+      countByPhase[t.agile_phase_id]++;
     } else {
-      tasksByPhase['unassigned'].push(t);
+      countByPhase['unassigned']++;
     }
   });
 
+  const visibleTasks = activePhaseId === 'unassigned'
+    ? sprintTasks.filter(t => !t.agile_phase_id || !phases.find(p => p.id === t.agile_phase_id))
+    : sprintTasks.filter(t => t.agile_phase_id === activePhaseId);
+
+  const unassignedTab = countByPhase['unassigned'] > 0 ? [{ id: 'unassigned', name: 'Unassigned', color: '#9ca3af' }] : [];
+
+  // Row 1: Backlog → Parked
+  // Row 2: PM Scoping → PM Review
+  // Row 3: Awaiting Deployment → end (+ unassigned)
+  const parkedIdx   = phases.findIndex(p => p.name.toUpperCase() === 'PARKED');
+  const pmReviewIdx = phases.findIndex(p => p.name.toUpperCase() === 'PM REVIEW');
+  const row1Phases  = parkedIdx   >= 0 ? phases.slice(0, parkedIdx + 1)                       : phases;
+  const row2Phases  = parkedIdx   >= 0 && pmReviewIdx >= 0 ? phases.slice(parkedIdx + 1, pmReviewIdx + 1) : (parkedIdx >= 0 ? phases.slice(parkedIdx + 1) : []);
+  const row3Phases  = pmReviewIdx >= 0 ? [...phases.slice(pmReviewIdx + 1), ...unassignedTab]  : unassignedTab;
+  const phaseTabs   = [...row1Phases, ...row2Phases, ...row3Phases]; // kept for any code that references it
+
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleAddTask = (phase) => {
-    setDefaultPhase(phase?.id !== 'unassigned' ? phase : null);
-    setEditTask(null);
-    setShowForm(true);
-  };
-
-  const handleEdit = (task) => {
-    setEditTask(task);
-    setDefaultPhase(null);
-    setShowForm(true);
-  };
-
+  const handleEdit   = (task) => { setEditTask(task); setShowForm(true); };
   const handleDelete = async () => {
-    try {
-      await client.delete(`/tasks/${deleteTask.id}`);
-      setDeleteTask(null);
-      loadAll();
-    } catch { /* ignore */ }
+    try { await client.delete(`/tasks/${deleteTask.id}`); setDeleteTask(null); loadAll(); }
+    catch { /* ignore */ }
   };
+  const handleSave = () => { setShowForm(false); setEditTask(null); loadAll(); };
 
-  const handleSave = () => {
-    setShowForm(false);
-    setEditTask(null);
-    setDefaultPhase(null);
-    loadAll();
+  const handleSprintStatusChange = async (newStatus) => {
+    if (!selectedId) return;
+    // Optimistically update local state
+    setSprints(prev => prev.map(s => s.id === selectedId ? { ...s, status: newStatus } : s));
+    try {
+      await client.put(`/sprints/${selectedId}`, { status: newStatus });
+    } catch {
+      // Revert on failure
+      loadAll();
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem', color: '#9ca3af' }}>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTop: '3px solid #016D2D', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginRight: 12 }} />
         Loading board…
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  const totalCols = phases.length + (tasksByPhase['unassigned'].length > 0 || canEdit ? 1 : 0);
-
   return (
     <div>
-      {/* ── Sprint selector bar ───────────────────────────────────────────── */}
+      {/* ── Top bar ───────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <ViewKanbanIcon style={{ color: '#016D2D', fontSize: 22 }} />
-        <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1d1d1d' }}>Sprint Board</span>
 
         {sprints.length === 0 ? (
-          <span style={{ fontSize: '0.85rem', color: '#9ca3af', fontStyle: 'italic' }}>No sprints configured — create sprints in Admin → Agile Projects → Sprint Management</span>
+          <span style={{ fontSize: '0.85rem', color: '#9ca3af', fontStyle: 'italic' }}>
+            No sprints configured — go to Admin → Agile Projects → Sprint Management
+          </span>
         ) : (
           <select
             value={selectedId ?? ''}
             onChange={e => setSelectedId(Number(e.target.value))}
-            style={{ padding: '0.35rem 0.75rem', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: '0.88rem', fontWeight: 600, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}
+            style={{ padding: '0.4rem 0.85rem', borderRadius: 8, border: '1.5px solid #d1d5db', fontSize: '0.88rem', fontWeight: 600, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}
           >
             {sprints.map(s => {
-              const end  = sprintEndDate(s);
+              const end   = sprintEndDate(s);
               const today = toLocalDateStr(new Date());
-              const isCurrent = s.start_date <= today && end >= today;
+              const isCur = s.start_date <= today && end >= today;
               return (
                 <option key={s.id} value={s.id}>
-                  {isCurrent ? '▶ ' : ''}{s.name}  ({s.start_date} → {end})
+                  {isCur ? '▶ ' : ''}{s.name}  ({s.start_date} → {end})
                 </option>
               );
             })}
           </select>
         )}
 
+        {/* Sprint Status selector */}
+        {selectedSprint && (() => {
+          const statusMeta = SPRINT_STATUS_META[selectedSprint.status] || SPRINT_STATUS_META.planned;
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem', borderRadius: 8, border: `1.5px solid ${statusMeta.border}`, background: statusMeta.bg }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: statusMeta.color, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>Sprint Status</span>
+              <select
+                value={selectedSprint.status || 'planned'}
+                onChange={e => handleSprintStatusChange(e.target.value)}
+                style={{ border: 'none', background: 'transparent', fontSize: '0.85rem', fontWeight: 700, color: statusMeta.color, cursor: 'pointer', outline: 'none', padding: '0 4px' }}
+              >
+                <option value="planned">Planned</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          );
+        })()}
+
+        {/* Finalise Sprint button — only when sprint is completed */}
+        {selectedSprint?.status === 'completed' && (
+          <button
+            onClick={() => setShowFinaliseConfirm(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.4rem 1rem', background: '#5b21b6', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            🏁 Finalise Sprint
+          </button>
+        )}
+
         {selectedSprint && (
-          <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', borderRadius: 20, padding: '3px 10px' }}>
-            <DirectionsRunIcon style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 3 }} />
+          <span style={{ fontSize: '0.8rem', color: '#6b7280', background: '#f3f4f6', borderRadius: 20, padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <DirectionsRunIcon style={{ fontSize: 13 }} />
             {selectedSprint.duration_weeks}w · {selectedSprint.start_date} → {sprintEndDate(selectedSprint)}
           </span>
         )}
 
-        <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: '#9ca3af' }}>
-          {boardTasks.length} task{boardTasks.length !== 1 ? 's' : ''}
+        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+          {sprintTasks.length} task{sprintTasks.length !== 1 ? 's' : ''} in sprint
         </span>
+
+        {canEdit && phases.length > 0 && sprints.length > 0 && (
+          <button
+            onClick={() => { setEditTask(null); setShowForm(true); }}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.45rem 1rem', background: '#016D2D', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+          >
+            <AddIcon style={{ fontSize: 16 }} />New Task
+          </button>
+        )}
       </div>
 
-      {/* ── No phases message ─────────────────────────────────────────────── */}
+      {/* ── No phases ─────────────────────────────────────────────────────── */}
       {phases.length === 0 && (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem', border: '2px dashed #e5e7eb', borderRadius: 12 }}>
-          No Agile Phases configured. Go to <strong>Admin → Agile Projects → Agile Phases</strong> to create your workflow columns.
+          No Agile Phases configured. Go to <strong>Admin → Agile Projects → Agile Phases</strong> to set up your workflow stages.
         </div>
       )}
 
-      {/* ── Kanban columns ───────────────────────────────────────────────── */}
-      {phases.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'flex-start' }}>
-          {phases.map(phase => (
-            <PhaseColumn
-              key={phase.id}
-              phase={phase}
-              tasks={tasksByPhase[phase.id] || []}
-              canEdit={canEdit}
-              onAddTask={handleAddTask}
-              onEdit={handleEdit}
-              onDelete={setDeleteTask}
-              totalCols={totalCols}
-            />
+      {/* ── Phase tabs (three rows) ───────────────────────────────────────── */}
+      {phaseTabs.length > 0 && (
+        <>
+          <div style={{ border: '1.5px solid #6b7280', borderRadius: 8, overflow: 'hidden', marginBottom: '1.25rem' }}>
+          {[['Planning', row1Phases], ['Building', row2Phases], ['Rollout', row3Phases]].map(([rowLabel, rowTabs], rowIdx) => rowTabs.length === 0 ? null : (
+            <div key={rowIdx} style={{ display: 'flex', alignItems: 'stretch', borderBottom: rowIdx === 2 ? 'none' : '1.5px solid #6b7280', background: rowIdx === 0 ? '#f0fdf4' : rowIdx === 1 ? '#dcfce7' : '#bbf7d0' }}>
+              {/* Row label */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem', width: 80, minWidth: 80, maxWidth: 80, borderRight: '1.5px solid #6b7280', flexShrink: 0, boxSizing: 'border-box' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6b7280', writingMode: 'horizontal-tb' }}>{rowLabel}</span>
+              </div>
+              <div style={{ display: 'flex', overflowX: 'auto', flex: 1 }}>
+              {rowTabs.map(phase => {
+                const isActive = activePhaseId === phase.id;
+                const count    = countByPhase[phase.id] ?? 0;
+                const accent   = phase.color || '#016D2D';
+                return (
+                  <button
+                    key={phase.id}
+                    onClick={() => setActivePhaseId(phase.id)}
+                    style={{
+                      padding: '0.55rem 1.1rem',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: isActive ? `3px solid ${accent}` : '3px solid transparent',
+                      marginBottom: -2,
+                      cursor: 'pointer',
+                      fontWeight: isActive ? 800 : 600,
+                      fontSize: '0.82rem',
+                      color: isActive ? accent : '#6b7280',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      transition: 'color 0.15s, border-color 0.15s',
+                    }}
+                  >
+                    {phase.color && phase.id !== 'unassigned' && (
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: phase.color, flexShrink: 0 }} />
+                    )}
+                    {phase.name}
+                    <span style={{
+                      fontSize: '0.68rem', fontWeight: 700,
+                      padding: '1px 7px', borderRadius: 20,
+                      background: isActive ? accent : '#f3f4f6',
+                      color: isActive ? '#fff' : '#6b7280',
+                      transition: 'background 0.15s, color 0.15s',
+                    }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+              </div>{/* end scrollable tabs */}
+            </div>
           ))}
+          </div>{/* end border wrapper */}
 
-          {/* Unassigned column — only show if there are unassigned tasks */}
-          {tasksByPhase['unassigned'].length > 0 && (
-            <PhaseColumn
-              key="unassigned"
-              phase={{ id: 'unassigned', name: 'Unassigned', color: '#9ca3af' }}
-              tasks={tasksByPhase['unassigned']}
-              canEdit={canEdit}
-              onAddTask={() => handleAddTask(null)}
-              onEdit={handleEdit}
-              onDelete={setDeleteTask}
-              totalCols={totalCols}
-            />
-          )}
-        </div>
+          {/* ── Task table for active phase ────────────────────────────────── */}
+          <TaskTable
+            tasks={visibleTasks}
+            canEdit={canEdit}
+            onEdit={handleEdit}
+            onDelete={setDeleteTask}
+          />
+        </>
       )}
 
       {/* ── Task form modal ───────────────────────────────────────────────── */}
@@ -316,9 +467,9 @@ export default function SprintBoard({ projectId, parentType = 'project', canEdit
           sprints={sprints}
           agilePhases={phases}
           defaultSprintId={editTask?.sprint_id ?? selectedId}
-          defaultPhaseId={editTask?.agile_phase_id ?? defaultPhase?.id ?? null}
+          defaultPhaseId={editTask?.agile_phase_id ?? (activePhaseId !== 'unassigned' ? activePhaseId : null)}
           onSave={handleSave}
-          onCancel={() => { setShowForm(false); setEditTask(null); setDefaultPhase(null); }}
+          onCancel={() => { setShowForm(false); setEditTask(null); }}
         />
       )}
 
@@ -328,6 +479,51 @@ export default function SprintBoard({ projectId, parentType = 'project', canEdit
           onConfirm={handleDelete}
           onCancel={() => setDeleteTask(null)}
         />
+      )}
+
+      {/* ── Finalise Sprint confirmation ──────────────────────────────────── */}
+      {showFinaliseConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', width: 460, maxWidth: '92vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1d1d1d', marginBottom: '0.75rem' }}>Finalise Sprint</div>
+            <p style={{ fontSize: '0.92rem', color: '#374151', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              Are you sure you want to Finalise the Sprint and Generate the Sprint Report and Release Notes?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowFinaliseConfirm(false)}
+                style={{ padding: '0.5rem 1.25rem', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', fontSize: '0.88rem', fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+              >
+                No
+              </button>
+              <button
+                onClick={() => { setShowFinaliseConfirm(false); setShowComingSoon(true); }}
+                style={{ padding: '0.5rem 1.25rem', borderRadius: 8, border: 'none', background: '#5b21b6', fontSize: '0.88rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coming soon notice ────────────────────────────────────────────── */}
+      {showComingSoon && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '2rem', width: 380, maxWidth: '92vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🚧</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1d1d1d', marginBottom: '0.5rem' }}>Coming Soon</div>
+            <p style={{ fontSize: '0.92rem', color: '#6b7280', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+              This feature will be available soon.
+            </p>
+            <button
+              onClick={() => setShowComingSoon(false)}
+              style={{ padding: '0.5rem 1.5rem', borderRadius: 8, border: 'none', background: '#016D2D', fontSize: '0.88rem', fontWeight: 700, color: '#fff', cursor: 'pointer' }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
