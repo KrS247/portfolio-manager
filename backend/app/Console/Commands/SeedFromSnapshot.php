@@ -21,6 +21,7 @@ class SeedFromSnapshot extends Command
         'working_calendar_settings',
         'portfolios', 'programs', 'projects',
         'tasks', 'task_resources', 'risks',
+        'agile_phases', 'sprints',
         'schedule_baselines', 'schedule_baseline_tasks',
         'task_dependencies', 'user_working_calendars',
         'teams', 'task_comments', 'activity_logs',
