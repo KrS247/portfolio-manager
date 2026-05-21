@@ -85,19 +85,14 @@ function computeCriticalPath(tasks, endDateField) {
 
   const hasDeps = tasks.some(t => t.depends_on && t.depends_on.length > 0);
 
-  // ── Fallback (no dependency data): critical = tasks ending latest ──────
+  // ── Fallback (no dependency data): treat all dated tasks as a sequential
+  //    chain sorted by end date — every task has float=0 in a pure sequence.
   if (!hasDeps) {
-    const endTimes = tasks
-      .map(t => parseDate(t[endDateField]))
-      .filter(Boolean)
-      .map(d => d.getTime());
-    if (endTimes.length === 0) return new Set();
-    const maxEnd = Math.max(...endTimes);
-    return new Set(
-      tasks
-        .filter(t => { const e = parseDate(t[endDateField]); return e && e.getTime() === maxEnd; })
-        .map(t => t.id)
-    );
+    const dated = tasks.filter(t => parseDate(t[endDateField]));
+    if (dated.length === 0) return new Set();
+    // Sort by end date ascending so the spine flows in chronological order
+    dated.sort((a, b) => parseDate(a[endDateField]) - parseDate(b[endDateField]));
+    return new Set(dated.map(t => t.id));
   }
 
   // ── Forward pass: Earliest Finish (EF) ────────────────────────────────
@@ -312,9 +307,9 @@ export default function GanttChart({
 
   const presentStatuses = [...new Set(renderItems.map(i => i.status).filter(Boolean))];
 
-  // Total rows = tasks + optional CP summary row
+  // Total rows = tasks only (CP is embedded per-row)
   const hasCpRow = showCriticalPath && cpSpan !== null;
-  const totalRows = flatRows.length + (hasCpRow ? 1 : 0);
+  const totalRows = flatRows.length;
 
   return (
     <div>
@@ -360,26 +355,20 @@ export default function GanttChart({
                 fontWeight: depth > 0 ? 500 : 600,
                 color: criticalIds.has(item.id) ? CP_COLOR : (depth > 0 ? '#6b7280' : '#374151'),
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                flex: 1,
               }}>
                 {item[nameField]}
               </span>
+              {criticalIds.has(item.id) && (
+                <span style={{
+                  fontSize: '0.7rem', color: CP_COLOR, flexShrink: 0,
+                  fontWeight: 800, letterSpacing: '0.02em',
+                  title: 'Critical Path',
+                }}>⚑</span>
+              )}
             </div>
           ))}
 
-          {/* Critical Path summary label row */}
-          {hasCpRow && (
-            <div style={{
-              height: ROW_H,
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '0 14px',
-              background: 'rgba(220,38,38,0.06)',
-              borderTop: `2px solid ${CP_COLOR}`,
-            }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: CP_COLOR, letterSpacing: '0.03em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                ⚑ Critical Path
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Right: horizontally-scrollable timeline */}
@@ -502,8 +491,8 @@ export default function GanttChart({
               if (isCP) rowBg = CP_BG;
               if (isAffected) rowBg = 'rgba(251,191,36,0.15)';
 
-              // Bar colour
-              let color = isCP ? CP_COLOR : (STATUS_COLORS[item.status] || STATUS_COLORS.open);
+              // Bar colour — CP tasks keep their status colour; red outline shows via box-shadow
+              let color = STATUS_COLORS[item.status] || STATUS_COLORS.open;
               if (isAffected) color = '#f59e0b';   // amber when preview-affected
 
               const pct   = item.percent_complete ?? 0;
@@ -550,7 +539,7 @@ export default function GanttChart({
                       <div style={{
                         position: 'absolute',
                         left: milestoneX - 1, top: 0, width: 2, height: '100%',
-                        background: isCP ? 'rgba(220,38,38,0.3)' : 'rgba(217,119,6,0.25)',
+                        background: 'rgba(217,119,6,0.25)',
                       }} />
                       <div
                         style={{
@@ -559,8 +548,8 @@ export default function GanttChart({
                           top: '50%',
                           transform: 'translate(-50%, -50%) rotate(45deg)',
                           width: 18, height: 18,
-                          background: isAffected ? '#f59e0b' : isCP ? CP_COLOR : '#f59e0b',
-                          border: `2.5px solid ${isCP ? '#b91c1c' : '#d97706'}`,
+                          background: '#f59e0b',
+                          border: `2.5px solid ${isCP ? CP_COLOR : '#d97706'}`,
                           boxShadow: `0 2px 6px ${isCP ? 'rgba(220,38,38,0.5)' : 'rgba(217,119,6,0.5)'}`,
                           cursor: canEdit ? 'pointer' : 'default',
                           zIndex: 3,
@@ -572,7 +561,7 @@ export default function GanttChart({
                         position: 'absolute',
                         left: milestoneX + 14, top: '50%', transform: 'translateY(-50%)',
                         fontSize: '0.68rem', fontWeight: 800,
-                        color: isCP ? CP_COLOR : '#d97706',
+                        color: '#d97706',
                         whiteSpace: 'nowrap',
                       }}>
                         {item[endDateField] || ''}
@@ -668,63 +657,117 @@ export default function GanttChart({
               );
             })}
 
-            {/* ── Dependency arrow SVG overlay ─────────────────────── */}
-            {flatRows.some(({ item: t }) => t.depends_on && t.depends_on.length > 0) && (() => {
-              const taskIndexMap = Object.fromEntries(flatRows.map(({ item: t }, i) => [t.id, i]));
-              const arrows = [];
+            {/* ── CP spine + dependency arrows — single SVG so spine is always above rows ── */}
+            {(() => {
+              // ── CP spine segments (drawn first = behind dep arrows) ──────────────
+              const cpSpineSegments = [];
+              if (showCriticalPath && criticalIds.size >= 2) {
+                const cpRows = flatRows
+                  .map((row, i) => ({ item: row.item, rowIdx: i }))
+                  .filter(({ item }) => criticalIds.has(item.id));
 
-              flatRows.forEach(({ item: succ }) => {
-                if (!succ.depends_on || succ.depends_on.length === 0) return;
-                const succIdx = taskIndexMap[succ.id];
-                const succIsMilestone = !!(succ.is_milestone);
-                const succEndD   = parseDate(succ[endDateField]);
-                const succStartD = succIsMilestone ? succEndD : (parseDate(succ.start_date) || succEndD);
-                if (!succEndD) return;
+                for (let k = 0; k < cpRows.length - 1; k++) {
+                  const src = cpRows[k];
+                  const dst = cpRows[k + 1];
 
-                // Successor anchor: left edge of bar, or milestone centre
-                const x2 = succIsMilestone
-                  ? diffDays(minD, succEndD) * DAY_W + DAY_W / 2
-                  : (succStartD ? diffDays(minD, succStartD) * DAY_W + 3 : null);
-                if (x2 === null) return;
-                const y2 = HEAD_H + succIdx * ROW_H + ROW_H / 2;
+                  const srcIsMilestone = !!(src.item.is_milestone);
+                  const dstIsMilestone = !!(dst.item.is_milestone);
 
-                succ.depends_on.forEach(predId => {
-                  const predIdx = taskIndexMap[predId];
-                  if (predIdx === undefined) return;
-                  const pred = flatRows[predIdx].item;
+                  const srcEndD   = parseDate(src.item[endDateField]);
+                  const dstEndD   = parseDate(dst.item[endDateField]);
+                  const dstStartD = dstIsMilestone ? dstEndD : (parseDate(dst.item.start_date) || dstEndD);
 
-                  // Predecessor anchor: right edge of bar, or milestone centre
-                  const predIsMilestone = !!(pred.is_milestone);
-                  const predEndD = parseDate(pred[endDateField]);
-                  if (!predEndD) return;
+                  if (!srcEndD || !dstStartD) continue;
 
-                  const x1 = predIsMilestone
-                    ? diffDays(minD, predEndD) * DAY_W + DAY_W / 2
-                    : diffDays(minD, predEndD) * DAY_W + DAY_W - 3;
-                  const y1 = HEAD_H + predIdx * ROW_H + ROW_H / 2;
+                  // Source: right edge of bar (or milestone centre)
+                  const x1 = srcIsMilestone
+                    ? diffDays(minD, srcEndD) * DAY_W + DAY_W / 2
+                    : diffDays(minD, srcEndD) * DAY_W + DAY_W - 3;
+                  const y1 = HEAD_H + src.rowIdx * ROW_H + ROW_H / 2;
 
-                  const isCPLink = criticalIds.has(pred.id) && criticalIds.has(succ.id);
-                  const color  = isCPLink ? CP_COLOR : '#64748b';
-                  const strokeW = isCPLink ? 2 : 1.5;
-                  const dash   = isCPLink ? undefined : '5 3';
+                  // Destination: left edge of bar (or milestone centre)
+                  const x2 = dstIsMilestone
+                    ? diffDays(minD, dstEndD) * DAY_W + DAY_W / 2
+                    : diffDays(minD, dstStartD) * DAY_W + 3;
+                  const y2 = HEAD_H + dst.rowIdx * ROW_H + ROW_H / 2;
 
-                  // L-shaped elbow: exit pred bar right → vertical → enter succ bar left
-                  const elbowX = Math.max(x1 + 8, x2 - 8);
+                  // L-shaped elbow: exit right → drop vertically → enter left
+                  const elbowX = Math.max(x1 + 14, x2 - 14);
                   const path = `M ${x1} ${y1} L ${elbowX} ${y1} L ${elbowX} ${y2} L ${x2} ${y2}`;
-                  // Arrowhead pointing right at (x2, y2)
-                  const ah = `${x2},${y2} ${x2 - 8},${y2 - 4} ${x2 - 8},${y2 + 4}`;
+                  const ah   = `${x2},${y2} ${x2 - 9},${y2 - 5} ${x2 - 9},${y2 + 5}`;
 
-                  arrows.push(
-                    <g key={`dep-${predId}-${succ.id}`} opacity={0.85}>
-                      <path d={path} stroke={color} strokeWidth={strokeW} fill="none"
-                        strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
-                      <polygon points={ah} fill={color} />
+                  cpSpineSegments.push(
+                    <g key={`cp-spine-${src.item.id}-${dst.item.id}`}>
+                      {/* Wide glow halo */}
+                      <path d={path} stroke={CP_COLOR} strokeWidth={7} fill="none"
+                        strokeLinecap="round" strokeLinejoin="round" opacity={0.15} />
+                      {/* Solid spine line */}
+                      <path d={path} stroke={CP_COLOR} strokeWidth={2.5} fill="none"
+                        strokeLinecap="round" strokeLinejoin="round" />
+                      {/* Arrowhead at destination */}
+                      <polygon points={ah} fill={CP_COLOR} />
+                      {/* Dot at source exit */}
+                      <circle cx={x1} cy={y1} r={4} fill={CP_COLOR} />
                     </g>
                   );
-                });
-              });
+                }
+              }
 
-              if (arrows.length === 0) return null;
+              // ── Dependency arrows ─────────────────────────────────────────────
+              const arrows = [];
+              const hasDeps = flatRows.some(({ item: t }) => t.depends_on && t.depends_on.length > 0);
+              if (hasDeps) {
+                const taskIndexMap = Object.fromEntries(flatRows.map(({ item: t }, i) => [t.id, i]));
+
+                flatRows.forEach(({ item: succ }) => {
+                  if (!succ.depends_on || succ.depends_on.length === 0) return;
+                  const succIdx = taskIndexMap[succ.id];
+                  const succIsMilestone = !!(succ.is_milestone);
+                  const succEndD   = parseDate(succ[endDateField]);
+                  const succStartD = succIsMilestone ? succEndD : (parseDate(succ.start_date) || succEndD);
+                  if (!succEndD) return;
+
+                  const x2 = succIsMilestone
+                    ? diffDays(minD, succEndD) * DAY_W + DAY_W / 2
+                    : (succStartD ? diffDays(minD, succStartD) * DAY_W + 3 : null);
+                  if (x2 === null) return;
+                  const y2 = HEAD_H + succIdx * ROW_H + ROW_H / 2;
+
+                  succ.depends_on.forEach(predId => {
+                    const predIdx = taskIndexMap[predId];
+                    if (predIdx === undefined) return;
+                    const pred = flatRows[predIdx].item;
+
+                    const predIsMilestone = !!(pred.is_milestone);
+                    const predEndD = parseDate(pred[endDateField]);
+                    if (!predEndD) return;
+
+                    const x1 = predIsMilestone
+                      ? diffDays(minD, predEndD) * DAY_W + DAY_W / 2
+                      : diffDays(minD, predEndD) * DAY_W + DAY_W - 3;
+                    const y1 = HEAD_H + predIdx * ROW_H + ROW_H / 2;
+
+                    const isCPLink = criticalIds.has(pred.id) && criticalIds.has(succ.id);
+                    const color   = isCPLink ? CP_COLOR : '#64748b';
+                    const strokeW = isCPLink ? 2 : 1.5;
+                    const dash    = isCPLink ? undefined : '5 3';
+
+                    const elbowX = Math.max(x1 + 8, x2 - 8);
+                    const path = `M ${x1} ${y1} L ${elbowX} ${y1} L ${elbowX} ${y2} L ${x2} ${y2}`;
+                    const ah   = `${x2},${y2} ${x2 - 8},${y2 - 4} ${x2 - 8},${y2 + 4}`;
+
+                    arrows.push(
+                      <g key={`dep-${predId}-${succ.id}`} opacity={0.85}>
+                        <path d={path} stroke={color} strokeWidth={strokeW} fill="none"
+                          strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
+                        <polygon points={ah} fill={color} />
+                      </g>
+                    );
+                  });
+                });
+              }
+
+              if (cpSpineSegments.length === 0 && arrows.length === 0) return null;
 
               return (
                 <svg style={{
@@ -738,87 +781,11 @@ export default function GanttChart({
                         floodColor="#fff" floodOpacity="0.9" />
                     </filter>
                   </defs>
+                  {/* CP spine first — renders behind dependency arrows */}
+                  {cpSpineSegments}
+                  {/* Dependency arrows on top */}
                   <g filter="url(#dep-glow)">{arrows}</g>
                 </svg>
-              );
-            })()}
-
-            {/* ── Critical Path summary line row ───────────────────── */}
-            {hasCpRow && (() => {
-              const cpRowTop = HEAD_H + flatRows.length * ROW_H;
-              const lineX1 = diffDays(minD, cpSpan.spanStart) * DAY_W;
-              const lineX2 = diffDays(minD, cpSpan.spanEnd)   * DAY_W + DAY_W;
-              const lineW  = Math.max(DAY_W, lineX2 - lineX1);
-              const midY   = ROW_H / 2;
-
-              return (
-                <div style={{
-                  position: 'absolute',
-                  top: cpRowTop, left: 0, right: 0, height: ROW_H,
-                  background: 'rgba(220,38,38,0.06)',
-                  borderTop: `2px solid ${CP_COLOR}`,
-                  zIndex: 2,
-                }}>
-                  {/* Horizontal spine line */}
-                  <div style={{
-                    position: 'absolute',
-                    left: lineX1,
-                    top: midY - 2,
-                    width: lineW,
-                    height: 4,
-                    background: CP_COLOR,
-                    borderRadius: 2,
-                    zIndex: 3,
-                  }} />
-                  {/* Left cap */}
-                  <div style={{
-                    position: 'absolute',
-                    left: lineX1,
-                    top: midY - 8,
-                    width: 3, height: 16,
-                    background: CP_COLOR,
-                    borderRadius: 2,
-                    zIndex: 3,
-                  }} />
-                  {/* Right arrowhead */}
-                  <div style={{
-                    position: 'absolute',
-                    left: lineX1 + lineW - 1,
-                    top: midY - 8,
-                    width: 0, height: 0,
-                    borderTop: '9px solid transparent',
-                    borderBottom: '9px solid transparent',
-                    borderLeft: `12px solid ${CP_COLOR}`,
-                    zIndex: 3,
-                  }} />
-                  {/* "Critical Path" label above the line */}
-                  <div style={{
-                    position: 'absolute',
-                    left: lineX1 + 6,
-                    top: midY - 20,
-                    fontSize: '0.67rem',
-                    fontWeight: 800,
-                    color: CP_COLOR,
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    zIndex: 4,
-                    textShadow: '0 0 4px #fff, 0 0 4px #fff',
-                  }}>
-                    Critical Path
-                  </div>
-                  {/* Duration label */}
-                  <div style={{
-                    position: 'absolute',
-                    left: lineX1 + lineW + 16,
-                    top: '50%', transform: 'translateY(-50%)',
-                    fontSize: '0.72rem', fontWeight: 700, color: CP_COLOR,
-                    whiteSpace: 'nowrap',
-                    zIndex: 4,
-                  }}>
-                    {diffDays(cpSpan.spanStart, cpSpan.spanEnd)} days
-                  </div>
-                </div>
               );
             })()}
 
@@ -855,7 +822,8 @@ export default function GanttChart({
         )}
         {showCriticalPath && criticalIds.size > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: 22, height: 4, borderRadius: 2, background: CP_COLOR }} />
+            <span style={{ fontSize: '0.78rem', color: CP_COLOR, fontWeight: 800, lineHeight: 1 }}>⚑</span>
+            <div style={{ width: 14, height: 10, borderRadius: 2, background: CP_COLOR }} />
             <span style={{ fontSize: '0.74rem', color: CP_COLOR, fontWeight: 700 }}>Critical Path</span>
           </div>
         )}
