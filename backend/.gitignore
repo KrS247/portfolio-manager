@@ -24,3 +24,5 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# Explicitly track the SQLite snapshot used for Railway seeding
+!database/portfolio.db

@@ -20,16 +20,18 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 # Copy application code
 COPY . .
 
-# Set permissions and restore the SQLite snapshot.
-# portfolio_snapshot has no .db extension so it is never excluded by *.db gitignore rules.
+# Set permissions. portfolio.db is committed to git and arrives via COPY above.
 RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
     && chmod -R 775 storage bootstrap/cache \
-    && if [ -f database/portfolio_snapshot ]; then \
+    && if [ -f database/portfolio.db ]; then \
+         chmod 664 database/portfolio.db; \
+         echo "portfolio.db present ($(wc -c < database/portfolio.db) bytes)"; \
+       elif [ -f database/portfolio_snapshot ]; then \
          cp database/portfolio_snapshot database/portfolio.db; \
          chmod 664 database/portfolio.db; \
-         echo "portfolio.db restored from snapshot ($(wc -c < database/portfolio.db) bytes)"; \
+         echo "portfolio.db restored from portfolio_snapshot ($(wc -c < database/portfolio.db) bytes)"; \
        else \
-         echo "WARNING: portfolio_snapshot not found"; \
+         echo "WARNING: neither portfolio.db nor portfolio_snapshot found — seeding will be skipped"; \
        fi
 
 EXPOSE 8080
