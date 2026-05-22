@@ -1,0 +1,8 @@
+[variables]
+NODE_VERSION = "20"
+
+[phases.install]
+cmds = ["npm ci --omit=dev"]
+
+[start]
+cmd = "node src/server.js"

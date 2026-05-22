@@ -32,6 +32,7 @@ import ApartmentIcon          from '@mui/icons-material/Apartment';
 import ViewColumnIcon         from '@mui/icons-material/ViewColumn';
 import ViewKanbanIcon         from '@mui/icons-material/ViewKanban';
 import DirectionsRunIcon      from '@mui/icons-material/DirectionsRun';
+import ApiIcon                from '@mui/icons-material/Api';
 import LogoutIcon             from '@mui/icons-material/Logout';
 
 const COLLAPSED_W = 52;   // icon-only width in px
@@ -58,6 +59,7 @@ const ADMIN_ITEMS = [
   { slug: 'admin.company',     label: 'Company Setup',    path: '/admin/company-setup',    Icon: BusinessIcon },
   { slug: 'admin.company',     label: 'Working Calendar', path: '/admin/working-calendar', Icon: EditCalendarIcon },
   { slug: 'admin.companies',   label: 'Companies',        path: '/admin/companies',        Icon: ApartmentIcon },
+  { slug: 'admin.mcp-integration', label: 'MCP Integration', path: '/admin/mcp-integration', Icon: ApiIcon },
 ];
 
 // Sub-group: Agile Projects

@@ -27,6 +27,7 @@ use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\AgilePhaseController;
 use App\Http\Controllers\SprintController;
+use App\Http\Controllers\McpApiKeyController;
 
 // ── Health check (public, no auth) ───────────────────────────────────────────
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'timestamp' => now()]));
@@ -211,4 +212,12 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('chat',                [ChatController::class, 'chat'])            ->middleware('authorize:tasks,edit');
     Route::post('chat/charter',        [ChatController::class, 'parseCharter'])    ->middleware('authorize:tasks,edit');
     Route::post('chat/charter/create', [ChatController::class, 'createFromCharter'])->middleware('authorize:portfolios,edit');
+
+    // ── MCP API Key management ────────────────────────────────────────────────
+    // Keys are used by the MCP server to authenticate AI assistants.
+    // Only admins with mcp-integration,edit can manage keys.
+    Route::get   ('mcp/keys',     [McpApiKeyController::class, 'index'])  ->middleware('authorize:admin.mcp-integration,view');
+    Route::post  ('mcp/keys',     [McpApiKeyController::class, 'store'])  ->middleware('authorize:admin.mcp-integration,edit');
+    Route::delete('mcp/keys/{id}',[McpApiKeyController::class, 'destroy'])->middleware('authorize:admin.mcp-integration,edit');
+    Route::get   ('mcp/info',     [McpApiKeyController::class, 'info'])   ->middleware('authorize:admin.mcp-integration,view');
 });

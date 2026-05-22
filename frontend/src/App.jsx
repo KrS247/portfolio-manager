@@ -28,6 +28,7 @@ import WorkingCalendarAdmin from './pages/admin/WorkingCalendarAdmin';
 import CompaniesAdmin from './pages/admin/CompaniesAdmin';
 import AgilePhasesAdmin from './pages/admin/AgilePhasesAdmin';
 import SprintManagementAdmin from './pages/admin/SprintManagementAdmin';
+import McpIntegrationAdmin from './pages/admin/McpIntegrationAdmin';
 import Reports from './pages/Reports';
 import Capacity from './pages/Capacity';
 import RiskManagement from './pages/RiskManagement';
@@ -165,6 +166,11 @@ function AppRoutes() {
       <Route path="/admin/sprint-management" element={
         <ProtectedRoute pageSlug="admin.sprint-management">
           <Layout><SprintManagementAdmin /></Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/mcp-integration" element={
+        <ProtectedRoute pageSlug="admin.mcp-integration">
+          <Layout><McpIntegrationAdmin /></Layout>
         </ProtectedRoute>
       } />
 
