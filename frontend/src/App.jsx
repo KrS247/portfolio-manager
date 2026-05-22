@@ -18,17 +18,7 @@ import ProgramDetail from './pages/ProgramDetail';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Tasks from './pages/Tasks';
-import UsersAdmin from './pages/admin/UsersAdmin';
-import RolesAdmin from './pages/admin/RolesAdmin';
-import PermissionsAdmin from './pages/admin/PermissionsAdmin';
-import DashboardAdmin from './pages/admin/DashboardAdmin';
-import TeamsAdmin from './pages/admin/TeamsAdmin';
-import CompanySetupAdmin from './pages/admin/CompanySetupAdmin';
-import WorkingCalendarAdmin from './pages/admin/WorkingCalendarAdmin';
-import CompaniesAdmin from './pages/admin/CompaniesAdmin';
-import AgilePhasesAdmin from './pages/admin/AgilePhasesAdmin';
-import SprintManagementAdmin from './pages/admin/SprintManagementAdmin';
-import McpIntegrationAdmin from './pages/admin/McpIntegrationAdmin';
+import AdminHub from './pages/admin/AdminHub';
 import Reports from './pages/Reports';
 import Capacity from './pages/Capacity';
 import RiskManagement from './pages/RiskManagement';
@@ -118,61 +108,25 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      <Route path="/admin/users" element={
+      {/* ── Administration hub (all sections as tabs) ── */}
+      <Route path="/admin" element={
         <ProtectedRoute pageSlug="admin.users">
-          <Layout><UsersAdmin /></Layout>
+          <Layout><AdminHub /></Layout>
         </ProtectedRoute>
       } />
-      <Route path="/admin/roles" element={
-        <ProtectedRoute pageSlug="admin.roles">
-          <Layout><RolesAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/permissions" element={
-        <ProtectedRoute pageSlug="admin.permissions">
-          <Layout><PermissionsAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/dashboard" element={
-        <ProtectedRoute pageSlug="admin.dashboard">
-          <Layout><DashboardAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/teams" element={
-        <ProtectedRoute pageSlug="admin.teams">
-          <Layout><TeamsAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/company-setup" element={
-        <ProtectedRoute pageSlug="admin.company">
-          <Layout><CompanySetupAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/working-calendar" element={
-        <ProtectedRoute pageSlug="admin.company">
-          <Layout><WorkingCalendarAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/companies" element={
-        <ProtectedRoute pageSlug="admin.companies">
-          <Layout><CompaniesAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/agile-phases" element={
-        <ProtectedRoute pageSlug="admin.agile-phases">
-          <Layout><AgilePhasesAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/sprint-management" element={
-        <ProtectedRoute pageSlug="admin.sprint-management">
-          <Layout><SprintManagementAdmin /></Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/mcp-integration" element={
-        <ProtectedRoute pageSlug="admin.mcp-integration">
-          <Layout><McpIntegrationAdmin /></Layout>
-        </ProtectedRoute>
-      } />
+
+      {/* Legacy deep-links — redirect to the hub with the right tab pre-selected */}
+      <Route path="/admin/users"             element={<Navigate to="/admin?tab=users"       replace />} />
+      <Route path="/admin/roles"             element={<Navigate to="/admin?tab=roles"       replace />} />
+      <Route path="/admin/permissions"       element={<Navigate to="/admin?tab=permissions" replace />} />
+      <Route path="/admin/dashboard"         element={<Navigate to="/admin?tab=dashboard"   replace />} />
+      <Route path="/admin/teams"             element={<Navigate to="/admin?tab=teams"       replace />} />
+      <Route path="/admin/company-setup"     element={<Navigate to="/admin?tab=company"     replace />} />
+      <Route path="/admin/working-calendar"  element={<Navigate to="/admin?tab=calendar"    replace />} />
+      <Route path="/admin/companies"         element={<Navigate to="/admin?tab=companies"   replace />} />
+      <Route path="/admin/agile-phases"      element={<Navigate to="/admin?tab=agile"       replace />} />
+      <Route path="/admin/sprint-management" element={<Navigate to="/admin?tab=sprints"     replace />} />
+      <Route path="/admin/mcp-integration"   element={<Navigate to="/admin?tab=mcp"         replace />} />
 
       <Route path="/reports" element={
         <ProtectedRoute pageSlug="reports">
