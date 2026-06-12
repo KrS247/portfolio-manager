@@ -164,13 +164,14 @@ export default function Dashboard() {
   }, [tasks, user]);
 
   // ── Upcoming Milestones widget ───────────────────────────────────────────────
+  const MILESTONE_HORIZON_DAYS = 180;
   const upcomingMilestones = useMemo(() => {
     if (!tasks) return [];
-    const today = new Date();
-    const in60  = new Date(); in60.setDate(today.getDate() + 60);
+    const today   = new Date();
+    const horizon = new Date(); horizon.setDate(today.getDate() + MILESTONE_HORIZON_DAYS);
     return tasks
       .filter(t => t.is_milestone && t.due_date && !['completed', 'cancelled'].includes(t.status))
-      .filter(t => { const d = new Date(t.due_date); return d >= today && d <= in60; })
+      .filter(t => { const d = new Date(t.due_date); return d >= today && d <= horizon; })
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
       .slice(0, 8);
   }, [tasks]);
@@ -310,10 +311,10 @@ export default function Dashboard() {
         <div style={styles.widget}>
           <div style={styles.widgetHeader}>
             <span style={styles.widgetTitle}>🏁 Upcoming Milestones</span>
-            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Next 60 days</span>
+            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Next 180 days</span>
           </div>
           {tLoad && <div style={styles.widgetEmpty}>Loading…</div>}
-          {!tLoad && upcomingMilestones.length === 0 && <div style={styles.widgetEmpty}>No milestones in the next 60 days.</div>}
+          {!tLoad && upcomingMilestones.length === 0 && <div style={styles.widgetEmpty}>No milestones in the next 180 days.</div>}
           <div style={styles.riskList}>
             {upcomingMilestones.map(t => {
               const days = daysUntil(t.due_date);
