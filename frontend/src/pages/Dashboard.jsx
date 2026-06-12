@@ -170,7 +170,7 @@ export default function Dashboard() {
     const today   = new Date();
     const horizon = new Date(); horizon.setDate(today.getDate() + MILESTONE_HORIZON_DAYS);
     return tasks
-      .filter(t => t.is_milestone && t.due_date && !['completed', 'cancelled'].includes(t.status))
+      .filter(t => t.is_milestone && t.due_date && t.status !== 'cancelled')
       .filter(t => { const d = new Date(t.due_date); return d >= today && d <= horizon; })
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
       .slice(0, 8);
@@ -317,8 +317,11 @@ export default function Dashboard() {
           {!tLoad && upcomingMilestones.length === 0 && <div style={styles.widgetEmpty}>No milestones in the next 180 days.</div>}
           <div style={styles.riskList}>
             {upcomingMilestones.map(t => {
+              const isDone = t.status === 'completed';
               const days = daysUntil(t.due_date);
-              const c = days <= 7
+              const c = isDone
+                ? { bg: '#f1f5f9', border: '#64748b', text: '#475569' }
+                : days <= 7
                 ? { bg: '#fef2f2', border: '#dc2626', text: '#991b1b' }
                 : days <= 14
                 ? { bg: '#fff7ed', border: '#ea580c', text: '#9a3412' }
@@ -329,7 +332,7 @@ export default function Dashboard() {
               return (
                 <Link key={t.id} to={taskUrl(t)} style={{ ...styles.riskRow, background: c.bg, borderLeft: `4px solid ${c.border}`, textDecoration: 'none', color: 'inherit' }}>
                   <div style={styles.riskInfo}>
-                    <div style={styles.riskTitle}>◆ {t.title}</div>
+                    <div style={styles.riskTitle}>{isDone ? '✓' : '◆'} {t.title}</div>
                     <div style={styles.riskMeta}>
                       <span style={{ fontSize: '0.78rem', color: c.text, fontWeight: 600 }}>Due {t.due_date}</span>
                       {projName && <><span style={styles.riskSep}>·</span><span style={styles.riskLink}>{projName}</span></>}
@@ -337,7 +340,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div style={{ ...styles.riskStatus, color: c.text, background: c.border + '22', border: `1px solid ${c.border}66` }}>
-                    {dayLabel}
+                    {isDone ? '✓ Completed' : dayLabel}
                   </div>
                 </Link>
               );
