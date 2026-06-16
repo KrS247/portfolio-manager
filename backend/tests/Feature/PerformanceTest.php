@@ -79,6 +79,26 @@ class PerformanceTest extends DatabaseTestCase
         );
     }
 
+    public function test_project_list_query_count_is_bounded(): void
+    {
+        [$admin, $token] = $this->createUserWithToken(['role' => 'admin']);
+        $this->seedPortfolioHierarchy($admin->id, 6); // 6 projects, each with tasks
+
+        $queryCount = 0;
+        DB::listen(function () use (&$queryCount) { $queryCount++; });
+
+        $this->getJson('/api/projects', $this->authHeader($token))->assertStatus(200);
+
+        // Aggregates are batched (grouped queries), so count is ~constant.
+        // The old per-project N+1 fired ~5 queries/project (30+ for 6 projects).
+        $this->assertLessThan(
+            15,
+            $queryCount,
+            "ProjectController::index fired {$queryCount} queries for 6 projects. "
+            . "Expected < 15 — likely an N+1 on per-project aggregates."
+        );
+    }
+
     public function test_task_list_query_count_is_bounded(): void
     {
         [$admin, $token] = $this->createUserWithToken(['role' => 'admin']);

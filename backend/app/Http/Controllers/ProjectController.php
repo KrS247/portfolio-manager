@@ -20,51 +20,49 @@ class ProjectController extends Controller {
             $query->whereIn('id', $scope['projectIds']);
         }
 
-        $projects = $query->get()->map(function($proj) {
-            $taskIds = Task::where('parent_type', 'project')->where('parent_id', $proj->id)->pluck('id');
-            $task_count = $taskIds->count();
+        $projects = $query->get();
+        $ids = $projects->pluck('id');
 
-            $percent_complete = Task::where('parent_type', 'project')
-                ->where('parent_id', $proj->id)
-                ->avg('percent_complete') ?? 0;
+        // ── Batch all per-project aggregates (was 5 queries PER project / N+1) ──
+        // 1 query: task count + avg percent_complete, grouped by project
+        $taskStats = Task::where('parent_type', 'project')->whereIn('parent_id', $ids)
+            ->selectRaw('parent_id, COUNT(*) as cnt, AVG(percent_complete) as pct')
+            ->groupBy('parent_id')->get()->keyBy('parent_id');
 
-            $avg_risk_rate = DB::table('risks')
-                ->join('tasks', 'risks.task_id', '=', 'tasks.id')
-                ->where('tasks.parent_type', 'project')
-                ->where('tasks.parent_id', $proj->id)
-                ->avg('risks.risk_rate') ?? 0;
+        // 1 query: avg risk rate, grouped by project
+        $riskAvg = DB::table('risks')
+            ->join('tasks', 'risks.task_id', '=', 'tasks.id')
+            ->where('tasks.parent_type', 'project')->whereIn('tasks.parent_id', $ids)
+            ->selectRaw('tasks.parent_id as pid, AVG(risks.risk_rate) as r')
+            ->groupBy('tasks.parent_id')->pluck('r', 'pid');
 
-            // Cost calculation
-            $estimated_cost = DB::table('task_resources')
-                ->join('tasks', 'task_resources.task_id', '=', 'tasks.id')
-                ->join('users', 'task_resources.user_id', '=', 'users.id')
-                ->where('tasks.parent_type', 'project')
-                ->where('tasks.parent_id', $proj->id)
-                ->selectRaw('SUM(task_resources.estimated_hours * COALESCE(users.hourly_rate, 0)) as total')
-                ->value('total') ?? 0;
+        // 1 query: estimated + actual cost, grouped by project
+        $costs = DB::table('task_resources')
+            ->join('tasks', 'task_resources.task_id', '=', 'tasks.id')
+            ->join('users', 'task_resources.user_id', '=', 'users.id')
+            ->where('tasks.parent_type', 'project')->whereIn('tasks.parent_id', $ids)
+            ->selectRaw('tasks.parent_id as pid,
+                         SUM(task_resources.estimated_hours * COALESCE(users.hourly_rate, 0)) as est,
+                         SUM(task_resources.actual_hours    * COALESCE(users.hourly_rate, 0)) as act')
+            ->groupBy('tasks.parent_id')->get()->keyBy('pid');
 
-            $actual_cost = DB::table('task_resources')
-                ->join('tasks', 'task_resources.task_id', '=', 'tasks.id')
-                ->join('users', 'task_resources.user_id', '=', 'users.id')
-                ->where('tasks.parent_type', 'project')
-                ->where('tasks.parent_id', $proj->id)
-                ->selectRaw('SUM(task_resources.actual_hours * COALESCE(users.hourly_rate, 0)) as total')
-                ->value('total') ?? 0;
-
+        $result = $projects->map(function ($proj) use ($taskStats, $riskAvg, $costs) {
+            $ts   = $taskStats->get($proj->id);
+            $cost = $costs->get($proj->id);
             return array_merge($proj->toArray(), [
-                'task_count' => $task_count,
-                'percent_complete' => round($percent_complete, 1),
-                'avg_risk_rate' => round($avg_risk_rate, 1),
-                'estimated_cost' => round($estimated_cost, 2),
-                'actual_cost' => round($actual_cost, 2),
-                'owner_name' => $proj->owner?->username,
-                'program_name' => $proj->program?->name,
-                'portfolio_id' => $proj->program?->portfolio_id,
-                'portfolio_name' => $proj->program?->portfolio?->name,
+                'task_count'       => (int) ($ts->cnt ?? 0),
+                'percent_complete' => round((float) ($ts->pct ?? 0), 1),
+                'avg_risk_rate'    => round((float) ($riskAvg[$proj->id] ?? 0), 1),
+                'estimated_cost'   => round((float) ($cost->est ?? 0), 2),
+                'actual_cost'      => round((float) ($cost->act ?? 0), 2),
+                'owner_name'       => $proj->owner?->username,
+                'program_name'     => $proj->program?->name,
+                'portfolio_id'     => $proj->program?->portfolio_id,
+                'portfolio_name'   => $proj->program?->portfolio?->name,
             ]);
         });
 
-        return response()->json($projects);
+        return response()->json($result);
     }
 
     public function show(Request $request, $id) {
