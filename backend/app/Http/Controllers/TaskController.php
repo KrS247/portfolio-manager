@@ -379,35 +379,59 @@ class TaskController extends Controller {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+    // Request-scoped caches so formatTask() doesn't re-query the same
+    // project/program/portfolio once per task (was an N+1 on every task list).
+    private array $projectCache   = [];
+    private array $programCache   = [];
+    private array $portfolioCache = [];
+
+    private function cachedProject($id) {
+        if (!array_key_exists($id, $this->projectCache)) {
+            $this->projectCache[$id] = \App\Models\Project::with(['program.portfolio'])->find($id);
+        }
+        return $this->projectCache[$id];
+    }
+    private function cachedProgram($id) {
+        if (!array_key_exists($id, $this->programCache)) {
+            $this->programCache[$id] = \App\Models\Program::with(['portfolio'])->find($id);
+        }
+        return $this->programCache[$id];
+    }
+    private function cachedPortfolio($id) {
+        if (!array_key_exists($id, $this->portfolioCache)) {
+            $this->portfolioCache[$id] = \App\Models\Portfolio::find($id);
+        }
+        return $this->portfolioCache[$id];
+    }
+
     private function formatTask($task) {
         $projectName   = null;
         $programName   = null;
         $portfolioName = null;
 
-        if ($task->parent_type === 'project') {
-            $project = \App\Models\Project::with(['program.portfolio'])->find($task->parent_id);
-            if ($project) {
-                $projectName   = $project->name;
-                $programName   = $project->program?->name;
-                $portfolioName = $project->program?->portfolio?->name;
-            }
-        } elseif ($task->parent_type === 'program') {
-            $program = \App\Models\Program::with(['portfolio'])->find($task->parent_id);
-            if ($program) {
-                $programName   = $program->name;
-                $portfolioName = $program->portfolio?->name;
-            }
-        } elseif ($task->parent_type === 'portfolio') {
-            $portfolio = \App\Models\Portfolio::find($task->parent_id);
-            if ($portfolio) $portfolioName = $portfolio->name;
-        }
-
         $projectId   = $task->parent_type === 'project'   ? $task->parent_id : null;
         $programId   = $task->parent_type === 'program'   ? $task->parent_id : null;
         $portfolioId = $task->parent_type === 'portfolio' ? $task->parent_id : null;
 
-        if ($projectId)       $portfolioId = $portfolioId ?? \App\Models\Project::find($projectId)?->program?->portfolio_id;
-        elseif ($programId)   $portfolioId = $portfolioId ?? \App\Models\Program::find($programId)?->portfolio_id;
+        if ($task->parent_type === 'project') {
+            $project = $this->cachedProject($task->parent_id);
+            if ($project) {
+                $projectName   = $project->name;
+                $programName   = $project->program?->name;
+                $portfolioName = $project->program?->portfolio?->name;
+                $portfolioId   = $project->program?->portfolio_id;
+            }
+        } elseif ($task->parent_type === 'program') {
+            $program = $this->cachedProgram($task->parent_id);
+            if ($program) {
+                $programName   = $program->name;
+                $portfolioName = $program->portfolio?->name;
+                $portfolioId   = $program->portfolio_id;
+            }
+        } elseif ($task->parent_type === 'portfolio') {
+            $portfolio = $this->cachedPortfolio($task->parent_id);
+            if ($portfolio) $portfolioName = $portfolio->name;
+        }
 
         $resourceNames = $task->relationLoaded('resources')
             ? $task->resources->map(fn($r) => $r->user?->username)->filter()->values()->all()

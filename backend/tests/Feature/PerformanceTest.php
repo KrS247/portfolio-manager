@@ -79,6 +79,33 @@ class PerformanceTest extends DatabaseTestCase
         );
     }
 
+    public function test_task_list_query_count_is_bounded(): void
+    {
+        [$admin, $token] = $this->createUserWithToken(['role' => 'admin']);
+
+        // 15 tasks under ONE project: formatTask must resolve the project/program/
+        // portfolio hierarchy once (memoized), not once per task.
+        $pId = DB::table('portfolios')->insertGetId(['company_id' => $this->defaultCompanyId, 'name' => 'P', 'status' => 'active', 'owner_id' => $admin->id]);
+        $progId = DB::table('programs')->insertGetId(['company_id' => $this->defaultCompanyId, 'portfolio_id' => $pId, 'name' => 'Pr', 'status' => 'active', 'owner_id' => $admin->id]);
+        $projId = DB::table('projects')->insertGetId(['company_id' => $this->defaultCompanyId, 'program_id' => $progId, 'name' => 'Proj', 'status' => 'active', 'owner_id' => $admin->id]);
+        for ($i = 0; $i < 15; $i++) {
+            DB::table('tasks')->insert(['company_id' => $this->defaultCompanyId, 'title' => "T{$i}", 'status' => 'in_progress', 'parent_type' => 'project', 'parent_id' => $projId, 'created_by' => $admin->id]);
+        }
+
+        $queryCount = 0;
+        DB::listen(function () use (&$queryCount) { $queryCount++; });
+
+        $this->getJson('/api/tasks', $this->authHeader($token))->assertStatus(200);
+
+        // Memoized: ~constant regardless of task count. Un-memoized N+1 would be 30+.
+        $this->assertLessThan(
+            15,
+            $queryCount,
+            "TaskController::index fired {$queryCount} queries for 15 tasks in one project. "
+            . "Expected < 15 — likely an N+1 in formatTask's hierarchy lookups."
+        );
+    }
+
     // ── P11: Unbounded task listing ───────────────────────────────────────────
 
     /**
