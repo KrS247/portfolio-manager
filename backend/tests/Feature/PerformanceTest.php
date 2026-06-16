@@ -27,23 +27,27 @@ class PerformanceTest extends DatabaseTestCase
     {
         for ($i = 0; $i < $count; $i++) {
             $pId = DB::table('portfolios')->insertGetId([
+                'company_id' => $this->defaultCompanyId,
                 'name'     => "Portfolio {$i}",
                 'status'   => 'active',
                 'owner_id' => $adminId,
             ]);
             $progId = DB::table('programs')->insertGetId([
+                'company_id'   => $this->defaultCompanyId,
                 'portfolio_id' => $pId,
                 'name'         => "Program {$i}",
                 'status'       => 'active',
                 'owner_id'     => $adminId,
             ]);
             $projId = DB::table('projects')->insertGetId([
+                'company_id' => $this->defaultCompanyId,
                 'program_id' => $progId,
                 'name'       => "Project {$i}",
                 'status'     => 'active',
                 'owner_id'   => $adminId,
             ]);
             DB::table('tasks')->insert([
+                'company_id'  => $this->defaultCompanyId,
                 'title'       => "Task {$i}",
                 'status'      => 'in_progress',
                 'parent_type' => 'project',
@@ -94,6 +98,7 @@ class PerformanceTest extends DatabaseTestCase
         $taskCount = 20;
         for ($i = 0; $i < $taskCount; $i++) {
             DB::table('tasks')->insert([
+                'company_id'  => $this->defaultCompanyId,
                 'title'       => "Bulk Task {$i}",
                 'status'      => 'not_started',
                 'parent_type' => 'project',

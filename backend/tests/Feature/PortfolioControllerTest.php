@@ -16,6 +16,7 @@ class PortfolioControllerTest extends DatabaseTestCase
     private function makePortfolio(int $ownerId): int
     {
         return DB::table('portfolios')->insertGetId([
+            'company_id' => $this->defaultCompanyId,
             'name'       => 'Test Portfolio ' . uniqid(),
             'status'     => 'active',
             'owner_id'   => $ownerId,

@@ -18,6 +18,7 @@ class TaskControllerTest extends DatabaseTestCase
     private function makeTask(array $overrides = []): int
     {
         return DB::table('tasks')->insertGetId(array_merge([
+            'company_id' => $this->defaultCompanyId,
             'title'      => 'Test Task ' . uniqid(),
             'status'     => 'not_started',
             'priority'   => 5,
