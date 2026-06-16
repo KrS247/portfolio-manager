@@ -383,23 +383,30 @@ abstract class DatabaseTestCase extends BaseTestCase
 
     protected function seedBaseData(): void
     {
+        // NOTE: the core-tables migration (0001_..._create_portfolio_manager_core_tables)
+        // already seeds roles, pages, and page_permissions under RefreshDatabase.
+        // Every insert here is therefore idempotent (insertOrIgnore / updateOrInsert)
+        // so the harness converges to a known state whether or not the migration
+        // seeded first — previously this double-seed threw a UNIQUE violation.
+
         // Default company (tenant) — all test users belong to this
-        DB::table('companies')->insert([
+        DB::table('companies')->insertOrIgnore([
             'name'   => 'Test Company',
             'slug'   => 'test',
             'plan'   => 'starter',
             'status' => 'active',
         ]);
-        $companyId = DB::table('companies')->where('slug', 'test')->value('id');
+        $companyId = DB::table('companies')->where('slug', 'test')->value('id')
+            ?? DB::table('companies')->orderBy('id')->value('id');
 
-        // Roles
-        DB::table('roles')->insert([
+        // Roles (idempotent — name is unique)
+        DB::table('roles')->insertOrIgnore([
             ['name' => 'admin',          'description' => 'Administrator', 'is_admin' => 1],
             ['name' => 'member',         'description' => 'Standard member', 'is_admin' => 0],
             ['name' => 'project_manager','description' => 'Project Manager', 'is_admin' => 0],
         ]);
 
-        // Pages that match the permission slugs used in middleware
+        // Pages that match the permission slugs used in middleware (idempotent — slug unique)
         $pages = [
             'dashboard','portfolios','programs','projects','tasks',
             'reports','capacity','risks','calendar',
@@ -408,17 +415,16 @@ abstract class DatabaseTestCase extends BaseTestCase
             'admin.company','admin.companies',
         ];
         foreach ($pages as $slug) {
-            DB::table('pages')->insert(['name' => ucfirst($slug), 'slug' => $slug]);
+            DB::table('pages')->insertOrIgnore(['name' => ucfirst($slug), 'slug' => $slug]);
         }
 
-        // Grant admin role full access to every page
+        // Grant admin role full access to every page (idempotent on role_id+page_id)
         $adminRoleId = DB::table('roles')->where('name', 'admin')->value('id');
         foreach (DB::table('pages')->get() as $page) {
-            DB::table('page_permissions')->insert([
-                'role_id'      => $adminRoleId,
-                'page_id'      => $page->id,
-                'access_level' => 'edit',
-            ]);
+            DB::table('page_permissions')->updateOrInsert(
+                ['role_id' => $adminRoleId, 'page_id' => $page->id],
+                ['access_level' => 'edit']
+            );
         }
 
         // Grant project_manager role edit access to non-admin pages
@@ -426,11 +432,10 @@ abstract class DatabaseTestCase extends BaseTestCase
         $pmEditSlugs = ['dashboard', 'portfolios', 'programs', 'projects', 'tasks',
                         'reports', 'capacity', 'risks', 'calendar'];
         foreach (DB::table('pages')->get() as $page) {
-            DB::table('page_permissions')->insert([
-                'role_id'      => $pmRoleId,
-                'page_id'      => $page->id,
-                'access_level' => in_array($page->slug, $pmEditSlugs) ? 'edit' : 'none',
-            ]);
+            DB::table('page_permissions')->updateOrInsert(
+                ['role_id' => $pmRoleId, 'page_id' => $page->id],
+                ['access_level' => in_array($page->slug, $pmEditSlugs) ? 'edit' : 'none']
+            );
         }
 
         // Expose companyId to subclasses that need to seed tenant-specific data
