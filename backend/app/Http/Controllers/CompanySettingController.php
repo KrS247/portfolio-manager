@@ -17,9 +17,10 @@ class CompanySettingController extends Controller
         'image/webp' => 'webp',
     ];
 
-    public function show()
+    public function show(Request $request)
     {
-        $setting = CompanySetting::find(1);
+        // TenantScope filters to the caller's company; first() returns their row.
+        $setting = CompanySetting::first();
         return response()->json([
             'company_name' => $setting?->company_name,
             // Return a boolean flag instead of an APP_URL-dependent absolute URL.
@@ -34,9 +35,16 @@ class CompanySettingController extends Controller
      * Public (no auth) endpoint: streams the company logo binary.
      * Bypasses APP_URL entirely — the URL is always relative to the API host.
      */
-    public function logo()
+    public function logo(Request $request)
     {
-        $setting = CompanySetting::find(1);
+        // Public route (no auth) — TenantScope is a no-op without a user, so query
+        // across tenants explicitly. Pick the requested company, else the lowest
+        // (preserves single-tenant behaviour while supporting per-tenant logos).
+        $companyId = $request->query('company_id');
+        $setting = CompanySetting::withoutTenant()
+            ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
+            ->orderBy('company_id')
+            ->first();
 
         if (!$setting?->logo_path || !Storage::disk('public')->exists($setting->logo_path)) {
             abort(404);
@@ -71,7 +79,9 @@ class CompanySettingController extends Controller
             'logo'         => 'nullable|file|mimes:jpeg,gif,png,webp|max:2048',
         ]);
 
-        $setting = CompanySetting::firstOrCreate(['id' => 1]);
+        // Per-tenant settings row keyed on the caller's company.
+        $caller = $this->getAuthUser($request);
+        $setting = CompanySetting::firstOrCreate(['company_id' => $caller?->company_id]);
 
         if ($request->hasFile('logo')) {
             $file     = $request->file('logo');
