@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
+import { extractApiError } from '../utils/apiError';
 
 export function useApi(url, deps = []) {
   const [data, setData] = useState(null);
@@ -12,7 +13,7 @@ export function useApi(url, deps = []) {
     setError(null);
     client.get(url)
       .then(({ data }) => setData(data))
-      .catch((err) => setError(err.response?.data?.error?.message || 'Failed to load data'))
+      .catch((err) => setError(extractApiError(err, 'Failed to load data')))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, ...deps]);
