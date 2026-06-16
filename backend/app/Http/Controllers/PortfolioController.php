@@ -159,7 +159,7 @@ class PortfolioController extends Controller {
         ]);
 
         // Project managers are automatically the owner of everything they create
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $data['owner_id'] = $request->attributes->get('auth_user')->id;
         }
 
@@ -170,7 +170,7 @@ class PortfolioController extends Controller {
     public function update(Request $request, $id) {
         $portfolio = Portfolio::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$portfolio->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only edit your own portfolios'], 403);
@@ -187,7 +187,7 @@ class PortfolioController extends Controller {
     public function destroy(Request $request, $id) {
         $portfolio = Portfolio::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$portfolio->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only delete your own portfolios'], 403);

@@ -22,11 +22,38 @@ use App\Models\User;
  */
 class UserController extends Controller
 {
-    // ── List all users ────────────────────────────────────────────────────────
-
-    public function index()
+    /**
+     * Constrain a user query to the caller's tenant unless they are a platform
+     * super-admin. Prevents listing/touching users in other companies.
+     */
+    private function scopeToTenant(Request $request, $query)
     {
-        $users = User::with(['role', 'company'])->get()->map(fn ($u) => [
+        if (!$this->isSuperAdmin($request)) {
+            $caller = $this->getAuthUser($request);
+            $query->where('company_id', $caller?->company_id);
+        }
+        return $query;
+    }
+
+    /** 403 if the target user is outside the caller's tenant (super-admins exempt). */
+    private function denyIfForeignUser(Request $request, User $target): ?\Illuminate\Http\JsonResponse
+    {
+        if ($this->isSuperAdmin($request)) {
+            return null;
+        }
+        $caller = $this->getAuthUser($request);
+        if (!$caller || (int) $target->company_id !== (int) $caller->company_id) {
+            return response()->json(['error' => 'Forbidden: cross-tenant access denied'], 403);
+        }
+        return null;
+    }
+
+    // ── List users (scoped to the caller's tenant) ─────────────────────────────
+
+    public function index(Request $request)
+    {
+        $users = $this->scopeToTenant($request, User::with(['role', 'company']))
+            ->get()->map(fn ($u) => [
             'id'           => $u->id,
             'username'     => $u->username,
             'email'        => $u->email,
@@ -46,9 +73,10 @@ class UserController extends Controller
 
     // ── Show single user ──────────────────────────────────────────────────────
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $user = User::with(['role', 'company'])->findOrFail($id);
+        if ($deny = $this->denyIfForeignUser($request, $user)) return $deny;
 
         return response()->json([
             'id'           => $user->id,
@@ -73,11 +101,18 @@ class UserController extends Controller
             'password'    => ['required', 'string',
                 Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()
             ],
-            'role_id'     => 'nullable|integer',
+            'role_id'     => 'nullable|integer|exists:roles,id',
             'hourly_rate' => 'nullable|numeric',
             'team_id'     => 'nullable|integer',
             'company_id'  => 'nullable|integer|exists:companies,id',
         ]);
+
+        // Tenant binding: a non-super-admin always creates users in their OWN
+        // company, regardless of any company_id supplied in the request.
+        $caller = $this->getAuthUser($request);
+        $companyId = $this->isSuperAdmin($request)
+            ? ($data['company_id'] ?? $caller?->company_id)
+            : $caller?->company_id;
 
         try {
             // password_hash and role_id are not in $fillable — set via direct
@@ -91,7 +126,7 @@ class UserController extends Controller
             $user->role_id       = $data['role_id']     ?? null;
             $user->hourly_rate   = $data['hourly_rate'] ?? null;
             $user->team_id       = $data['team_id']     ?? null;
-            $user->company_id    = $data['company_id']  ?? null;
+            $user->company_id    = $companyId;
             $user->save();
         } catch (\Throwable $e) {
             Log::error('UserController: failed to create user', ['error' => $e->getMessage(), 'ip' => $request->ip()]);
@@ -121,11 +156,12 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        if ($deny = $this->denyIfForeignUser($request, $user)) return $deny;
 
         // Validate only the fields that may be updated
         $rules = [
             'email'       => 'sometimes|email|unique:users,email,' . $id,
-            'role_id'     => 'sometimes|nullable|integer',
+            'role_id'     => 'sometimes|nullable|integer|exists:roles,id',
             'hourly_rate' => 'sometimes|nullable|numeric',
             'team_id'     => 'sometimes|nullable|integer',
             'company_id'  => 'sometimes|nullable|integer|exists:companies,id',
@@ -143,6 +179,10 @@ class UserController extends Controller
         // role_id and password_hash are not in $fillable; set via direct assignment.
         // All other allowed fields go through fill() normally. H-9 fix.
         $updateData = $request->only(['email', 'hourly_rate', 'team_id', 'company_id']);
+        // Only a super-admin may move a user between tenants.
+        if (!$this->isSuperAdmin($request)) {
+            unset($updateData['company_id']);
+        }
         $user->fill($updateData);
 
         if ($request->has('role_id')) {
@@ -180,6 +220,7 @@ class UserController extends Controller
         }
 
         $target = User::findOrFail($id);
+        if ($deny = $this->denyIfForeignUser($request, $target)) return $deny;
         $target->delete();
 
         Log::info('UserController: user deleted by admin', [

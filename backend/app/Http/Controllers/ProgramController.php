@@ -103,7 +103,7 @@ class ProgramController extends Controller {
             'owner_id'     => 'nullable|integer|exists:users,id',
         ]);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $data['owner_id'] = $request->attributes->get('auth_user')->id;
         }
 
@@ -114,7 +114,7 @@ class ProgramController extends Controller {
     public function update(Request $request, $id) {
         $program = Program::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$program->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only edit your own programs'], 403);
@@ -131,7 +131,7 @@ class ProgramController extends Controller {
     public function destroy(Request $request, $id) {
         $program = Program::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$program->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only delete your own programs'], 403);

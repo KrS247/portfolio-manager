@@ -154,7 +154,7 @@ class TaskController extends Controller {
     public function update(Request $request, $id) {
         $task = Task::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$task->created_by !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only edit your own tasks'], 403);
@@ -239,7 +239,7 @@ class TaskController extends Controller {
     public function destroy(Request $request, $id) {
         $task = Task::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$task->created_by !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only delete your own tasks'], 403);

@@ -127,9 +127,25 @@ class WorkingCalendarController extends Controller
         return response()->json(['message' => 'Holiday removed.']);
     }
 
-    /** GET /working-calendar/user/{userId} */
-    public function userCalendar(int $userId)
+    /**
+     * Ensure the target user belongs to the caller's tenant before exposing or
+     * mutating their calendar. Returns a 403/404 response when not, else null.
+     * (user_working_calendars has no company_id, so we check via the User row.)
+     */
+    private function denyIfForeignUser(Request $request, int $userId): ?\Illuminate\Http\JsonResponse
     {
+        $caller = $this->getAuthUser($request);
+        $target = \App\Models\User::find($userId);
+        if (!$caller || !$target || (int) $target->company_id !== (int) $caller->company_id) {
+            return response()->json(['error' => 'Forbidden: cross-tenant access denied'], 403);
+        }
+        return null;
+    }
+
+    /** GET /working-calendar/user/{userId} */
+    public function userCalendar(Request $request, int $userId)
+    {
+        if ($deny = $this->denyIfForeignUser($request, $userId)) return $deny;
         $cal = UserWorkingCalendar::where('user_id', $userId)->first();
         return response()->json($cal);
     }
@@ -137,6 +153,8 @@ class WorkingCalendarController extends Controller
     /** PUT /working-calendar/user/{userId} */
     public function updateUserCalendar(Request $request, int $userId)
     {
+        if ($deny = $this->denyIfForeignUser($request, $userId)) return $deny;
+
         $data = $request->validate([
             'work_days'     => 'nullable|string|regex:/^[1-7](,[1-7])*$/',
             'hours_per_day' => 'nullable|numeric|min:1|max:24',

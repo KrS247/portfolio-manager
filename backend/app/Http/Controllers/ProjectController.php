@@ -110,7 +110,7 @@ class ProjectController extends Controller {
             'is_agile'    => 'nullable|boolean',
         ]);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $data['owner_id'] = $request->attributes->get('auth_user')->id;
         }
 
@@ -121,7 +121,7 @@ class ProjectController extends Controller {
     public function update(Request $request, $id) {
         $project = Project::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$project->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only edit your own projects'], 403);
@@ -139,7 +139,7 @@ class ProjectController extends Controller {
     public function destroy(Request $request, $id) {
         $project = Project::findOrFail($id);
 
-        if ($this->isPM($request)) {
+        if (!$this->isAdmin($request)) {
             $authUser = $request->attributes->get('auth_user');
             if ((int)$project->owner_id !== (int)$authUser->id) {
                 return response()->json(['error' => 'You can only delete your own projects'], 403);
