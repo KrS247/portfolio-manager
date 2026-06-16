@@ -14,11 +14,14 @@ backend/.env
 backend-node/.env
 .sync-secrets
 
-# SQLite databases (exclude all except the Railway-deployed snapshot)
+# SQLite databases — never version a database (it contains live PII + hashes).
+# Production data is delivered at runtime via Postgres, not baked into git.
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
-!backend/database/portfolio.db
 
 # Laravel
 backend/bootstrap/cache/*.php
