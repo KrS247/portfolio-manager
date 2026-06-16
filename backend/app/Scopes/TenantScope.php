@@ -22,7 +22,19 @@ class TenantScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        if ($user = auth()->user()) {
+        $user = auth()->user();
+
+        // Fallback: resolve the tenant from the request attribute set by
+        // JwtAuthenticate (covers any path where the guard user is not bound,
+        // e.g. defensively for API-key auth).
+        if (!$user && app()->bound('request')) {
+            $attr = request()->attributes->get('auth_user');
+            if ($attr instanceof \App\Models\User) {
+                $user = $attr;
+            }
+        }
+
+        if ($user) {
             $builder->where($model->getTable() . '.company_id', $user->company_id);
         }
     }

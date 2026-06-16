@@ -34,7 +34,17 @@ trait BelongsToTenant
 
         // ── Write: auto-populate company_id on new records ───────────────────
         static::creating(function ($model) {
-            if (empty($model->company_id) && $user = auth()->user()) {
+            if (!empty($model->company_id)) {
+                return;
+            }
+            $user = auth()->user();
+            if (!$user && app()->bound('request')) {
+                $attr = request()->attributes->get('auth_user');
+                if ($attr instanceof \App\Models\User) {
+                    $user = $attr;
+                }
+            }
+            if ($user) {
                 $model->company_id = $user->company_id;
             }
         });

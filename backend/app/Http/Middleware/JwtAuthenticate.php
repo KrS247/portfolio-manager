@@ -36,6 +36,11 @@ class JwtAuthenticate {
 
             $mcpKey->update(['last_used_at' => now()]);
             $request->attributes->set('auth_user', $mcpKey->user);
+            // CRITICAL: bind the user to the auth guard so TenantScope and
+            // BelongsToTenant (which read auth()->user()) resolve the tenant.
+            // Without this, MCP requests wrote NULL company_id and read across
+            // tenants because auth()->user() was null.
+            auth()->setUser($mcpKey->user);
             return $next($request);
         }
 

@@ -184,14 +184,15 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('baselines/{id}',   [ScheduleBaselineController::class, 'show'])   ->middleware('authorize:tasks,view');
     Route::delete('baselines/{id}',[ScheduleBaselineController::class, 'destroy'])->middleware('authorize:tasks,edit');
 
-    // Onboarding (admin only)
-    Route::get('onboarding/status',      [OnboardingController::class, 'status']);
-    Route::post('onboarding/workspace',  [OnboardingController::class, 'updateWorkspace']);
-    Route::post('onboarding/invite',     [OnboardingController::class, 'inviteUser']);
-    Route::get('onboarding/sample-data',   [OnboardingController::class, 'sampleDataStatus']);
-    Route::post('onboarding/sample-data',  [OnboardingController::class, 'loadSampleData']);
-    Route::delete('onboarding/sample-data',[OnboardingController::class, 'deleteSampleData']);
-    Route::post('onboarding/complete',   [OnboardingController::class, 'complete']);
+    // Onboarding (admin only) — gated so a non-admin cannot invite users,
+    // mutate the workspace, or self-escalate to admin via the invite flow.
+    Route::get('onboarding/status',        [OnboardingController::class, 'status'])          ->middleware('authorize:admin.dashboard,view');
+    Route::post('onboarding/workspace',    [OnboardingController::class, 'updateWorkspace'])  ->middleware('authorize:admin.dashboard,edit');
+    Route::post('onboarding/invite',       [OnboardingController::class, 'inviteUser'])       ->middleware('authorize:admin.dashboard,edit');
+    Route::get('onboarding/sample-data',   [OnboardingController::class, 'sampleDataStatus']) ->middleware('authorize:admin.dashboard,view');
+    Route::post('onboarding/sample-data',  [OnboardingController::class, 'loadSampleData'])   ->middleware('authorize:admin.dashboard,edit');
+    Route::delete('onboarding/sample-data',[OnboardingController::class, 'deleteSampleData'])  ->middleware('authorize:admin.dashboard,edit');
+    Route::post('onboarding/complete',     [OnboardingController::class, 'complete'])         ->middleware('authorize:admin.dashboard,edit');
 
     // Agile Phases (admin)
     Route::get('agile-phases',            [AgilePhaseController::class, 'index'])  ->middleware('authorize:admin.agile-phases,view');
