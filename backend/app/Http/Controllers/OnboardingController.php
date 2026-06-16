@@ -81,11 +81,19 @@ class OnboardingController extends Controller
      */
     public function inviteUser(Request $request)
     {
+        // Defense-in-depth: the route is admin-gated, but never let a non-admin
+        // create a user (and never let one mint an admin/PM) even if the route
+        // middleware is ever misconfigured.
+        if (!$this->isAdmin($request)) {
+            return response()->json(['error' => 'Forbidden: admin role required'], 403);
+        }
+
         $data = $request->validate([
             'username'      => 'required|string|max:100|unique:users,username',
             'email'         => 'required|email|unique:users,email',
             'role'          => 'required|in:admin,project_manager,member',
-            'temp_password' => 'required|string|min:8',
+            // Match the platform-wide password policy (was min:8).
+            'temp_password' => ['required', 'string', \Illuminate\Validation\Rules\Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised()],
         ]);
 
         $authUser = $this->getAuthUser($request);

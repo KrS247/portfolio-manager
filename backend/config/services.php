@@ -47,4 +47,8 @@ return [
         'token' => env('CLICKUP_MCP_TOKEN'),
     ],
 
+    'mcp' => [
+        'server_url' => env('MCP_SERVER_URL', 'https://portfolio-manager-mcp.up.railway.app'),
+    ],
+
 ];

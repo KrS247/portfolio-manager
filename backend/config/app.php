@@ -123,4 +123,21 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Platform Super-Admin Allowlist
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated list of email addresses permitted to manage companies
+    | (tenants) other than their own — the only identities allowed to perform
+    | cross-tenant administration. An ordinary tenant admin (role.is_admin) is
+    | NOT a super-admin. Empty by default (no cross-tenant access).
+    |
+    */
+
+    'super_admin_emails' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('SUPER_ADMIN_EMAILS', ''))
+    ))),
+
 ];

@@ -41,6 +41,33 @@ abstract class Controller
     }
 
     /**
+     * Returns true when the authenticated user holds an admin role
+     * (role.is_admin = true). Tenant-scoped admin — NOT cross-company.
+     */
+    protected function isAdmin(Request $request): bool
+    {
+        $user = $this->getAuthUser($request);
+        return (bool) ($user && $user->role && $user->role->is_admin);
+    }
+
+    /**
+     * Returns true when the authenticated user is a platform super-admin —
+     * the only role permitted to manage companies other than their own.
+     * Membership is controlled by the SUPER_ADMIN_EMAILS config allowlist
+     * (comma-separated) so cross-tenant management is opt-in, not implied by
+     * an ordinary tenant admin role.
+     */
+    protected function isSuperAdmin(Request $request): bool
+    {
+        $user = $this->getAuthUser($request);
+        if (!$user || !$user->email) {
+            return false;
+        }
+        $allow = array_map('strtolower', (array) config('app.super_admin_emails', []));
+        return in_array(strtolower($user->email), $allow, true);
+    }
+
+    /**
      * Returns true when the authenticated user has the project_manager role.
      */
     protected function isPM(Request $request): bool

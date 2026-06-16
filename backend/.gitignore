@@ -24,5 +24,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-# Explicitly track the SQLite snapshot used for Railway seeding
-!database/portfolio.db
+# The SQLite DB is never versioned — it holds live PII + password hashes.
+# Seed data is delivered at runtime (see DatabaseSeeder), not via git.
+/database/*.db

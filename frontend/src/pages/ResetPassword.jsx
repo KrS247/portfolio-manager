@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import client from '../api/client';
+import { extractApiError } from '../utils/apiError';
 
 export default function ResetPassword() {
   const [searchParams]          = useSearchParams();
@@ -23,7 +24,7 @@ export default function ResetPassword() {
       // Redirect to login after 2.5 s
       setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to reset password. The link may have expired.');
+      setError(extractApiError(err, 'Failed to reset password. The link may have expired.'));
     } finally {
       setLoading(false);
     }

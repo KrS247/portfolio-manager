@@ -75,7 +75,7 @@ class McpApiKeyController extends Controller
     /** Return MCP server info (URL, version, available tools) */
     public function info()
     {
-        $mcpUrl = env('MCP_SERVER_URL', 'https://portfolio-manager-mcp.up.railway.app');
+        $mcpUrl = config('services.mcp.server_url');
 
         return response()->json([
             'mcp_server_url' => rtrim($mcpUrl, '/') . '/mcp',
