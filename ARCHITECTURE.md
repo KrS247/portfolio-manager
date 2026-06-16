@@ -138,21 +138,20 @@ Browser
 
 ### Backend (Local Development)
 
-| Layer | Technology | Version |
-|---|---|---|
-| Runtime | Node.js | 20+ |
-| Framework | Express | 4.18.3 |
-| Authentication | jsonwebtoken | 9.0.2 |
-| Password Hashing | bcrypt | 5.1.1 |
-| Security Headers | helmet | 7.1.0 |
+The backend is **Laravel 12** in **all** environments. Run it locally with
+`php artisan serve` (see `start.sh`) against a local SQLite database.
+
+> **Deprecated:** the `backend-node/` Express app is legacy and is **not** used
+> by `start.sh`, CI, or production. Do not run or develop against it; it is
+> retained only until the seed pipeline is fully migrated off it. The live
+> backend is `backend/` (Laravel).
 
 ### Data
 
 | Environment | Database | Notes |
 |---|---|---|
 | Production | PostgreSQL | Managed (Railway Postgres) |
-| Local development | SQLite | `backend-node/data/portfolio.db` |
-| Seeding snapshot | SQLite | `backend/database/portfolio.db` |
+| Local development | SQLite | `backend/database/database.sqlite` (gitignored) |
 
 ### Infrastructure
 
