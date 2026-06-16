@@ -234,11 +234,22 @@ class AuthController extends Controller
             'expires_at' => now()->addHour()->toDateTimeString(),
         ]);
 
-        // Build the reset URL with the PLAINTEXT token (never log this URL)
-        $resetUrl = config('app.url', 'http://localhost:5173') . '/reset-password?token=' . $plainToken;
+        // Build the reset URL with the PLAINTEXT token (never log this URL).
+        // Link points at the SPA (frontend), not the API host.
+        $resetUrl = rtrim(config('app.frontend_url'), '/') . '/reset-password?token=' . $plainToken;
 
-        // TODO: send $resetUrl via email (Mailgun / Resend / SES).
-        // The plaintext token is NEVER logged — only the hash is stored in the DB.
+        // Send the reset email. Failures must not break the generic response or
+        // leak whether the address exists, so swallow + log (without PII/token).
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->send(new \App\Mail\PasswordResetMail($resetUrl));
+        } catch (\Throwable $e) {
+            Log::error('AuthController: password reset email failed to send', [
+                'ip'      => $request->ip(),
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
 
         Log::info('AuthController: password reset token issued', [
             'ip'      => $request->ip(),

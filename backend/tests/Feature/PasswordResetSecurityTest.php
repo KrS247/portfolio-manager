@@ -24,6 +24,33 @@ class PasswordResetSecurityTest extends DatabaseTestCase
         ]);
     }
 
+    // ── Email delivery ──────────────────────────────────────────────────────
+
+    public function test_forgot_password_sends_reset_email_with_frontend_link(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $user = $this->makeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => $user->email])
+             ->assertStatus(200);
+
+        \Illuminate\Support\Facades\Mail::assertSent(
+            \App\Mail\PasswordResetMail::class,
+            fn ($mail) => $mail->hasTo($user->email)
+                && str_contains($mail->resetUrl, '/reset-password?token=')
+        );
+    }
+
+    public function test_forgot_password_unknown_email_sends_no_mail(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'nobody@example.com'])
+             ->assertStatus(200);
+
+        \Illuminate\Support\Facades\Mail::assertNothingSent();
+    }
+
     // ── Token storage ─────────────────────────────────────────────────────────
 
     public function test_reset_token_is_not_stored_as_plaintext_in_db(): void

@@ -140,4 +140,19 @@ return [
         explode(',', (string) env('SUPER_ADMIN_EMAILS', ''))
     ))),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Base URL of the SPA, used to build user-facing links (e.g. password-reset
+    | emails). Falls back to the first configured FRONTEND_ORIGIN, then app.url.
+    |
+    */
+
+    'frontend_url' => env(
+        'FRONTEND_URL',
+        (trim(explode(',', (string) env('FRONTEND_ORIGIN', ''))[0]) ?: null) ?? env('APP_URL', 'http://localhost:5173')
+    ),
+
 ];
