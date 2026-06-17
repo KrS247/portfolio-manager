@@ -45,13 +45,18 @@ class JwtAuthenticate {
         }
 
         // ── 2 & 3. JWT authentication (Bearer header or HttpOnly cookie) ─────
-        if (!$request->hasHeader('Authorization') && $request->cookie('jwt_token')) {
-            $token = $request->cookie('jwt_token');
-            $request->headers->set('Authorization', 'Bearer ' . $token);
-        }
+        // Browser clients authenticate via the HttpOnly jwt_token cookie; API
+        // clients via the Authorization: Bearer header. Resolve the cookie token
+        // explicitly with setToken() (more robust than injecting a header and
+        // relying on parseToken() to re-read it).
+        $cookieToken = (!$request->hasHeader('Authorization'))
+            ? $request->cookie('jwt_token')
+            : null;
 
         try {
-            $userFromToken = JWTAuth::setRequest($request)->parseToken()->authenticate();
+            $userFromToken = $cookieToken
+                ? JWTAuth::setToken($cookieToken)->authenticate()
+                : JWTAuth::setRequest($request)->parseToken()->authenticate();
             if (!$userFromToken) {
                 return response()->json(['error' => 'User not found'], 401);
             }

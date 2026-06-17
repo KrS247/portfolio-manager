@@ -14,9 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'jwt.auth'  => \App\Http\Middleware\JwtAuthenticate::class,
-            'authorize' => \App\Http\Middleware\Authorize::class,
-            'throttle'  => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            'jwt.auth'    => \App\Http\Middleware\JwtAuthenticate::class,
+            'authorize'   => \App\Http\Middleware\Authorize::class,
+            'throttle'    => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            'csrf.cookie' => \App\Http\Middleware\VerifyCsrfForCookieAuth::class,
         ]);
 
         // SecurityHeaders is registered on the GLOBAL middleware stack (not just

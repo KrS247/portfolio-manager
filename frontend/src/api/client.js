@@ -1,45 +1,59 @@
 import axios from 'axios';
 
 /**
- * Axios client with dual-token auth strategy (H-10 fix):
+ * Cookie-based auth (XSS-safe): the JWT lives only in the HttpOnly `jwt_token`
+ * cookie set by the backend on login and sent automatically via
+ * withCredentials. It is never stored in localStorage, so XSS cannot steal it.
  *
- * Primary (preferred):  HttpOnly cookie 'jwt_token' set by the backend on login.
- *   - Sent automatically with every request via withCredentials: true.
- *   - Not accessible to JavaScript, so XSS attacks cannot steal the token.
- *
- * Fallback (legacy/API clients): Authorization: Bearer header from localStorage.
- *   - Still supported for backward compatibility with non-browser clients.
- *   - Migrate away from localStorage towards cookie-only as users re-login.
+ * CSRF: because the SPA and API are cross-origin the cookie is SameSite=None,
+ * so mutating requests carry a stateless CSRF token (HMAC of the JWT) in the
+ * X-XSRF-TOKEN header. The token is held in memory only and fetched from
+ * GET /auth/csrf (or returned on login).
  */
+let csrfToken = null;
+export function setCsrfToken(token) { csrfToken = token || null; }
+export function getCsrfToken() { return csrfToken; }
+
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-  // Required so the browser sends the HttpOnly jwt_token cookie cross-origin
-  withCredentials: true,
+  withCredentials: true, // send the HttpOnly jwt_token cookie cross-origin
 });
 
-// Attach Authorization header only if a localStorage token exists (backward compat).
-// Once the HttpOnly cookie is set the backend will use that; the header is redundant
-// but harmless and keeps existing sessions working without forcing a re-login.
+const MUTATING = ['post', 'put', 'patch', 'delete'];
+
+// Attach the CSRF token on state-changing requests.
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('pm_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (csrfToken && MUTATING.includes((config.method || 'get').toLowerCase())) {
+    config.headers['X-XSRF-TOKEN'] = csrfToken;
   }
   return config;
 });
 
-// On 401, clear auth state and redirect to login
+// On 401, clear client auth state and redirect to login.
 client.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('pm_token');
       localStorage.removeItem('pm_user');
+      csrfToken = null;
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
+
+/**
+ * Fetch the CSRF token for the current cookie session (call on app bootstrap
+ * when a user is present). Safe to call when not authenticated — it just no-ops.
+ */
+export async function initCsrf() {
+  try {
+    const { data } = await client.get('/auth/csrf');
+    setCsrfToken(data?.csrf_token);
+  } catch {
+    setCsrfToken(null);
+  }
+}
 
 export default client;

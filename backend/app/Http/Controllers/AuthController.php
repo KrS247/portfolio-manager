@@ -99,11 +99,13 @@ class AuthController extends Controller
         // the JSON body for backward-compatible API clients (mobile apps, Postman).
         // Browser clients should use cookie-based auth with withCredentials: true
         // and ignore the token in the JSON body.
-        $isSecure = $request->secure() || app()->environment('production');
-
+        // The SPA (Vercel) and API (Railway) are cross-origin, so the cookie must
+        // be SameSite=None to be sent — which requires Secure=true. CSRF is then
+        // enforced via the HMAC token below (see VerifyCsrfForCookieAuth).
         return response()
             ->json([
-                'token' => $token,
+                'token'      => $token,                                        // for non-browser/API clients
+                'csrf_token' => \App\Http\Middleware\VerifyCsrfForCookieAuth::tokenFor($token),
                 'user'  => [
                     'id'                   => $user->id,
                     'username'             => $user->username,
@@ -121,11 +123,27 @@ class AuthController extends Controller
                 $ttlMinutes,                    // minutes until expiry
                 '/',                            // path
                 null,                           // domain (null = current host)
-                $isSecure,                      // Secure flag
+                true,                           // Secure (required for SameSite=None)
                 true,                           // HttpOnly — not accessible to JS
                 false,                          // raw (don't URL-encode)
-                'Strict'                        // SameSite — CSRF protection
+                'None'                          // SameSite — cross-origin SPA; CSRF via HMAC token
             );
+    }
+
+    /**
+     * GET /api/auth/csrf — returns the CSRF token for the current cookie session.
+     * The SPA calls this on bootstrap (it holds the token in memory only) and
+     * echoes it in X-XSRF-TOKEN on mutating requests.
+     */
+    public function csrf(Request $request)
+    {
+        $jwt = $request->cookie('jwt_token');
+        if (!$jwt) {
+            return response()->json(['error' => 'No active session'], 401);
+        }
+        return response()->json([
+            'csrf_token' => \App\Http\Middleware\VerifyCsrfForCookieAuth::tokenFor($jwt),
+        ]);
     }
 
     // ── Logout ────────────────────────────────────────────────────────────────
@@ -162,7 +180,7 @@ class AuthController extends Controller
                 true,       // Secure
                 true,       // HttpOnly
                 false,
-                'Strict'
+                'None'      // match the login cookie's SameSite so it clears cross-origin
             );
     }
 

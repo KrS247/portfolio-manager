@@ -33,6 +33,7 @@ return [
         'X-Requested-With',
         'Accept',
         'X-Backup-Token',
+        'X-XSRF-TOKEN',
     ],
 
     'exposed_headers' => [],

@@ -52,7 +52,13 @@ Route::prefix('auth')->group(function () {
 });
 
 // ── Protected routes ──────────────────────────────────────────────────────────
-Route::middleware('jwt.auth')->group(function () {
+// csrf.cookie enforces CSRF on cookie-authenticated mutating requests; it is a
+// no-op for Bearer / x-api-key clients and for safe (GET/HEAD/OPTIONS) methods.
+Route::middleware(['jwt.auth', 'csrf.cookie'])->group(function () {
+
+    // CSRF token for cookie-auth SPA clients (GET → CSRF-exempt). Returns the
+    // HMAC token the SPA must echo in X-XSRF-TOKEN on mutating requests.
+    Route::get('auth/csrf', [AuthController::class, 'csrf']);
 
     // Auth management
     Route::post('auth/logout',   [AuthController::class, 'logout']);
